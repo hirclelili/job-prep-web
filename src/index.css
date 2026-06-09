@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-gray-400; }
+
+/* Prose overrides for chat output */
+.prose { @apply max-w-none; }
+.prose h1 { @apply text-lg font-bold mt-4 mb-2; }
+.prose h2 { @apply text-base font-semibold mt-3 mb-2; }
+.prose h3 { @apply text-sm font-semibold mt-2 mb-1; }
+.prose p { @apply text-sm leading-relaxed mb-2; }
+.prose ul { @apply text-sm; }
+.prose li { @apply mb-1; }
+.prose table { @apply text-sm; }
+.prose code { @apply bg-gray-100 px-1 rounded text-xs; }
+.prose pre { @apply bg-gray-100 p-3 rounded-lg overflow-x-auto; }
+.prose blockquote { @apply border-l-4 border-blue-200 pl-4 italic text-gray-600; }
+
+/* Streaming cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '▋';
+  @apply text-blue-500 ml-0.5;
+  animation: blink 1s infinite;
+}
