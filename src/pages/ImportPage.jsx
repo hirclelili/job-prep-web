@@ -20,6 +20,7 @@ export default function ImportPage() {
   const [step, setStep] = useState('upload')   // upload | extracting | parsing | error
   const [fileName, setFileName] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [parseNote, setParseNote] = useState('')
 
   const handleFile = useCallback(async (file) => {
     if (!file || file.type !== 'application/pdf') {
@@ -32,12 +33,16 @@ export default function ImportPage() {
     setFileName(file.name)
     setStep('extracting')
     setErrorMsg('')
+    setParseNote('')
 
     // 1. Extract text
     let text = ''
     try {
       const result = await extractTextFromPDF(file)
       text = result.text
+      if (result.skippedPages?.length) {
+        setParseNote(`有 ${result.skippedPages.length} 页 PDF 结构较特殊，已跳过这些页面并继续识别。`)
+      }
     } catch (err) {
       setErrorMsg(`PDF 解析失败：${err.message}`)
       setStep('error')
@@ -122,6 +127,9 @@ export default function ImportPage() {
           {step === 'error' && errorMsg && (
             <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
               {errorMsg}
+              <p className="text-xs mt-2 text-red-500">
+                可以尝试用浏览器、预览或 WPS 重新导出 PDF；如果仍失败，先复制简历文字后手动整理经历。
+              </p>
             </div>
           )}
         </>
@@ -135,6 +143,7 @@ export default function ImportPage() {
               {step === 'extracting' ? '正在提取 PDF 文字…' : 'AI 正在识别经历条目…'}
             </p>
             <p className="text-xs text-gray-400 mt-1">{fileName}</p>
+            {parseNote && <p className="text-xs text-amber-600 mt-2">{parseNote}</p>}
           </div>
         </div>
       )}
