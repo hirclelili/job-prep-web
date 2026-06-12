@@ -21,43 +21,19 @@ export default function ImportPage() {
   const [fileName, setFileName] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [parseNote, setParseNote] = useState('')
+  const [showTextInput, setShowTextInput] = useState(false)
+  const [resumeText, setResumeText] = useState('')
 
-  const handleFile = useCallback(async (file) => {
-    if (!file || file.type !== 'application/pdf') {
-      setErrorMsg('请上传 PDF 文件')
-      setStep('error')
-      return
-    }
-    if (!isConfigured) { setShowSettings(true); return }
-
-    setFileName(file.name)
-    setStep('extracting')
-    setErrorMsg('')
-    setParseNote('')
-
-    // 1. Extract text
-    let text = ''
-    try {
-      const result = await extractTextFromPDF(file)
-      text = result.text
-      if (result.skippedPages?.length) {
-        setParseNote(`有 ${result.skippedPages.length} 页 PDF 结构较特殊，已跳过这些页面并继续识别。`)
-      }
-    } catch (err) {
-      setErrorMsg(`PDF 解析失败：${err.message}`)
-      setStep('error')
-      return
-    }
-
+  const parseResumeText = useCallback(async (text, sourceName = '简历文本') => {
     if (!text.trim()) {
-      setErrorMsg('未能提取到文字。请确认这是文字版 PDF（非扫描件）。')
+      setErrorMsg('没有可识别的简历文字，请先粘贴简历内容。')
       setStep('error')
       return
     }
 
     setStep('parsing')
+    setFileName(sourceName)
 
-    // 2. AI parse
     let full = ''
     try {
       const gen = streamChat({
@@ -85,7 +61,49 @@ export default function ImportPage() {
     bulkImportExperiences(result.experiences)
     refreshExperiences()
     navigate('/library', { state: { justImported: result.experiences.length } })
-  }, [settings, isConfigured])
+  }, [settings, refreshExperiences, navigate])
+
+  const handleFile = useCallback(async (file) => {
+    if (!file || file.type !== 'application/pdf') {
+      setErrorMsg('请上传 PDF 文件')
+      setStep('error')
+      return
+    }
+    if (!isConfigured) { setShowSettings(true); return }
+
+    setFileName(file.name)
+    setStep('extracting')
+    setErrorMsg('')
+    setParseNote('')
+
+    let text = ''
+    try {
+      const result = await extractTextFromPDF(file)
+      text = result.text
+      if (result.skippedPages?.length) {
+        setParseNote(`有 ${result.skippedPages.length} 页 PDF 结构较特殊，已跳过这些页面并继续识别。`)
+      }
+    } catch (err) {
+      setErrorMsg(`PDF 解析失败：${err.message}`)
+      setStep('error')
+      return
+    }
+
+    if (!text.trim()) {
+      setErrorMsg('未能提取到文字。请确认这是文字版 PDF（非扫描件），或改用粘贴文本导入。')
+      setStep('error')
+      return
+    }
+
+    await parseResumeText(text, file.name)
+  }, [isConfigured, parseResumeText, setShowSettings])
+
+  const handleTextImport = async () => {
+    if (!isConfigured) { setShowSettings(true); return }
+    setErrorMsg('')
+    setParseNote('')
+    await parseResumeText(resumeText, '粘贴的简历文本')
+  }
 
   const handleDrop = (e) => {
     e.preventDefault()
@@ -124,11 +142,40 @@ export default function ImportPage() {
             className="hidden"
             onChange={e => handleFile(e.target.files[0])}
           />
+          <div className="mt-4">
+            <button
+              onClick={() => setShowTextInput(v => !v)}
+              className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm text-gray-600 hover:bg-gray-50"
+            >
+              {showTextInput ? '收起文本导入' : '粘贴简历文本导入'}
+            </button>
+          </div>
+          {showTextInput && (
+            <div className="mt-3 rounded-2xl border border-gray-100 bg-white p-4">
+              <textarea
+                value={resumeText}
+                onChange={e => setResumeText(e.target.value)}
+                rows={10}
+                placeholder="把简历全文复制到这里，系统会自动识别工作/实习/项目经历并存入经历库。"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-gray-400">适合 PDF 解析失败、扫描件或网页简历复制导入。</p>
+                <button
+                  onClick={handleTextImport}
+                  disabled={!resumeText.trim()}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                >
+                  识别文本
+                </button>
+              </div>
+            </div>
+          )}
           {step === 'error' && errorMsg && (
             <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
               {errorMsg}
               <p className="text-xs mt-2 text-red-500">
-                可以尝试用浏览器、预览或 WPS 重新导出 PDF；如果仍失败，先复制简历文字后手动整理经历。
+                可以尝试用浏览器、预览或 WPS 重新导出 PDF；如果仍失败，可以点击“粘贴简历文本导入”。
               </p>
             </div>
           )}
