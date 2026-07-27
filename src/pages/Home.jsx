@@ -205,7 +205,8 @@ export default function Home() {
       <main className="home-shell">
         <section className="home-hero">
           <div>
-            <h1 className="home-title">实习求职助手</h1>
+            <h1 className="home-title">职序</h1>
+            <p className="home-subtitle">AI 求职工作台</p>
           </div>
           <div className="home-hero-actions">
             <button onClick={() => navigate('/import')} className="home-primary">

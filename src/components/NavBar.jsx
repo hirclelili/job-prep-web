@@ -40,7 +40,7 @@ export default function NavBar() {
             <span className="absolute bottom-2 left-3.5 h-2.5 w-2.5 rounded-full bg-[#f59e0b]" />
           </span>
           <span className="leading-tight">
-            <span className="block">求职准备</span>
+            <span className="block">职序</span>
           </span>
         </Link>
 

@@ -293,7 +293,7 @@ function summarizeMemory(memory) {
 
 function buildAgentSystemPrompt({ tools, context, memory, localState, intentGate }) {
   const manifest = getToolManifest(tools)
-  return `你是这个产品里的全局求职准备 Agent，不是单页聊天助手。
+  return `你是「职序」里的全局 AI 助手，不是单页聊天助手。
 
 你的任务：
 1. 理解用户当前处在求职链路的哪一步：简历导入、经历调研、经历资产、选岗位方向、简历版本、岗位、面试准备。
