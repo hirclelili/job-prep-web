@@ -3,57 +3,27 @@ import { useNavigate } from 'react-router-dom'
 import { getJobs, getProfile, getResumes } from '../utils/storage'
 import { useApp } from '../contexts/AppContext'
 
-const modules = [
+const outcomes = [
   {
-    title: '我的经历',
-    action: '第一步',
-    description: '导入简历，深挖单段经历，沉淀可复用的经历资产。',
-    path: '/library',
+    title: '经历档案',
+    description: '每段经历的完整事实、项目细节、简历表达和面试素材。',
+    note: '可以持续补充，也可以只修改其中一部分',
     colors: ['#55dff1', '#ff5cc8', '#fff04a'],
     visual: 'experience',
-    entries: [
-      { label: '简历导入', path: '/import' },
-      { label: '经历调研', path: '/experience' },
-      { label: '经历资产', path: '/library' },
-    ],
   },
   {
-    title: '投递准备',
-    action: '第二步',
-    description: '判断岗位方向，生成可以投递的简历版本。',
-    path: '/resumes',
+    title: '简历版本',
+    description: '基于同一套经历，按通用方向、岗位方向或具体 JD 生成不同版本。',
+    note: '正文可编辑，支持 Word、PDF 和 PNG 导出',
     colors: ['#ff5cc8', '#b6ffdd', '#725cff'],
     visual: 'delivery',
-    entries: [
-      { label: '选岗位方向', path: '/directions' },
-      { label: '简历版本', path: '/resumes' },
-    ],
   },
   {
-    title: '岗位',
-    action: '第三步',
-    description: '保存多个 JD，把每个岗位对应的简历版本和面试材料沉淀成索引。',
-    path: '/jobs',
+    title: '岗位档案',
+    description: '为每个 JD 保存对应简历、面试手册和知识体系。',
+    note: '多个岗位彼此独立，需要时随时继续准备',
     colors: ['#8c6bff', '#50d7e6', '#ffe66d'],
     visual: 'interview',
-    entries: [
-      { label: '岗位列表', path: '/jobs' },
-      { label: 'JD 详情', path: '/jobs' },
-      { label: '岗位材料', path: '/jobs' },
-    ],
-  },
-  {
-    title: '面试准备',
-    action: '第四步',
-    description: '选择具体岗位，进入面试手册和知识体系的生成工作区。',
-    path: '/interviews',
-    colors: ['#50d7e6', '#b6ffdd', '#ff5cc8'],
-    visual: 'interview',
-    entries: [
-      { label: '选择岗位', path: '/interviews' },
-      { label: '面试手册', path: '/interviews' },
-      { label: '知识体系', path: '/interviews' },
-    ],
   },
 ]
 
@@ -164,29 +134,18 @@ function ThemeVisual({ type, colors }) {
   )
 }
 
-function ModuleTile({ module, index }) {
-  const navigate = useNavigate()
-
+function OutcomeTile({ outcome }) {
   return (
-    <article className="home-tile" style={{ '--tile-color': module.colors[0], '--tile-soft': module.colors[1] }}>
-      <button onClick={() => navigate(module.path)} className="home-tile-main">
+    <article className="home-tile" style={{ '--tile-color': outcome.colors[0], '--tile-soft': outcome.colors[1] }}>
+      <div className="home-tile-main">
         <div className="home-tile-top">
-          <span className="home-tile-index">{String(index + 1).padStart(2, '0')}</span>
-          <ThemeVisual type={module.visual} colors={module.colors} />
+          <ThemeVisual type={outcome.visual} colors={outcome.colors} />
         </div>
         <div>
-          <p className="home-tile-action">{module.action}</p>
-          <h2 className="home-tile-title">{module.title}</h2>
-          <p className="home-tile-desc">{module.description}</p>
+          <h2 className="home-tile-title">{outcome.title}</h2>
+          <p className="home-tile-desc">{outcome.description}</p>
+          <p className="home-outcome-note">{outcome.note}</p>
         </div>
-      </button>
-
-      <div className="home-entry-grid">
-        {module.entries.map(entry => (
-          <button key={entry.label} onClick={() => navigate(entry.path)} className="home-entry">
-            {entry.label}
-          </button>
-        ))}
       </div>
     </article>
   )
@@ -205,7 +164,7 @@ export default function Home() {
       <main className="home-shell">
         <section className="home-hero">
           <div>
-            <h1 className="home-title">把经历，变成机会。</h1>
+            <h1 className="home-title">基于真实经历，生成面向不同岗位的简历与面试材料。</h1>
           </div>
           <div className="home-hero-actions">
             <button onClick={() => navigate('/import')} className="home-primary">
@@ -231,8 +190,8 @@ export default function Home() {
         </section>
 
         <section className="home-grid">
-          {modules.map((module, index) => (
-            <ModuleTile key={module.title} module={module} index={index} />
+          {outcomes.map(outcome => (
+            <OutcomeTile key={outcome.title} outcome={outcome} />
           ))}
         </section>
 

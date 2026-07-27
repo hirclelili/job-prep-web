@@ -237,9 +237,9 @@
   .home-title {
     margin-top: 0;
     margin-bottom: 0;
-    font-size: 46px;
-    line-height: 1.12;
-    font-weight: 850;
+    font-size: 36px;
+    line-height: 1.18;
+    font-weight: 800;
     letter-spacing: 0;
   }
 
@@ -348,61 +348,37 @@
   }
 
   .home-tile {
-    min-height: 400px;
+    min-height: 354px;
     border: 1px solid rgba(255, 255, 255, 0.78);
     border-radius: 34px;
-    background: rgba(255, 255, 255, 0.74);
-    padding: 18px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.92)),
+      linear-gradient(135deg, var(--tile-color), var(--tile-soft));
+    padding: 24px;
     box-shadow: 0 24px 70px rgba(62, 48, 86, 0.12);
     backdrop-filter: blur(12px);
-    transition: transform 180ms ease, box-shadow 180ms ease;
-  }
-
-  .home-tile:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 30px 82px rgba(62, 48, 86, 0.17);
   }
 
   .home-tile-main {
     display: flex;
-    min-height: 286px;
+    min-height: 304px;
     width: 100%;
     flex-direction: column;
     justify-content: space-between;
-    border-radius: 26px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.92)),
-      linear-gradient(135deg, var(--tile-color), var(--tile-soft));
-    padding: 18px;
     text-align: left;
   }
 
   .home-tile-top {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 14px;
   }
 
-  .home-tile-index {
-    border-radius: 999px;
-    background: #171321;
-    padding: 6px 10px;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 850;
-  }
-
-  .home-tile-action {
-    color: #6b6277;
-    font-size: 13px;
-    font-weight: 850;
-  }
-
   .home-tile-title {
-    margin-top: 8px;
+    margin-top: 0;
     color: #171321;
-    font-size: 30px;
+    font-size: 27px;
     line-height: 1.05;
     font-weight: 900;
     letter-spacing: 0;
@@ -414,6 +390,16 @@
     font-size: 14px;
     line-height: 1.75;
     font-weight: 550;
+  }
+
+  .home-outcome-note {
+    margin-top: 16px;
+    border-top: 1px solid rgba(23, 19, 33, 0.12);
+    padding-top: 14px;
+    color: #756d82;
+    font-size: 12px;
+    line-height: 1.6;
+    font-weight: 650;
   }
 
   .home-visual {
@@ -702,28 +688,6 @@
     bottom: 0;
   }
 
-  .home-entry-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  .home-entry {
-    min-height: 42px;
-    border-radius: 999px;
-    background: #171321;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 850;
-    transition: transform 160ms ease, background 160ms ease;
-  }
-
-  .home-entry:hover {
-    transform: translateY(-2px);
-    background: #2a2139;
-  }
-
   .home-footer-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(320px, 0.95fr);
@@ -807,7 +771,7 @@
     }
 
     .home-title {
-      font-size: 42px;
+      font-size: 32px;
     }
 
     .home-flow {
