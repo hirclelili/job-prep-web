@@ -1,28 +1,40 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { extractTextFromPDF } from '../utils/pdfExtract'
-import { buildParsePrompt, RESUME_PARSER_SYSTEM } from '../prompts/resumeParser'
-import { streamChat } from '../services/llm'
-import { bulkImportExperiences } from '../utils/storage'
+import { runTextSkill } from '../skills/core'
+import { resumeParserSkill } from '../skills/resumeParserSkill'
+import { bulkImportExperiences, saveOriginalResume, saveProfile } from '../utils/storage'
+import { clearDraft, DRAFT_KEYS, formatDraftTime, readDraft, writeDraft } from '../utils/draftStorage'
 import { useApp } from '../contexts/AppContext'
-
-function parseJsonFromText(text) {
-  const match = text.match(/```json\s*([\s\S]*?)\s*```/)
-  if (!match) return null
-  try { return JSON.parse(match[1]) } catch { return null }
-}
+import PathHeader from '../components/PathHeader'
 
 export default function ImportPage() {
   const navigate = useNavigate()
   const { settings, isConfigured, setShowSettings, refreshExperiences } = useApp()
   const fileInputRef = useRef(null)
+  const [initialDraft] = useState(() => readDraft(DRAFT_KEYS.resumeImport))
 
   const [step, setStep] = useState('upload')   // upload | extracting | parsing | error
-  const [fileName, setFileName] = useState('')
+  const [fileName, setFileName] = useState(() => initialDraft?.data?.fileName || '')
   const [errorMsg, setErrorMsg] = useState('')
   const [parseNote, setParseNote] = useState('')
-  const [showTextInput, setShowTextInput] = useState(false)
-  const [resumeText, setResumeText] = useState('')
+  const [showTextInput, setShowTextInput] = useState(() => !!initialDraft?.data?.resumeText)
+  const [resumeText, setResumeText] = useState(() => initialDraft?.data?.resumeText || '')
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState(() => initialDraft?.updatedAt || '')
+  const [restoredDraft, setRestoredDraft] = useState(() => Boolean(initialDraft?.data?.resumeText))
+
+  useEffect(() => {
+    if (!resumeText.trim() && !showTextInput) {
+      clearDraft(DRAFT_KEYS.resumeImport)
+      setDraftUpdatedAt('')
+      return
+    }
+    const saved = writeDraft(DRAFT_KEYS.resumeImport, {
+      fileName,
+      resumeText,
+      showTextInput,
+    })
+    if (saved) setDraftUpdatedAt(saved.updatedAt)
+  }, [fileName, resumeText, showTextInput])
 
   const parseResumeText = useCallback(async (text, sourceName = '简历文本') => {
     if (!text.trim()) {
@@ -34,32 +46,39 @@ export default function ImportPage() {
     setStep('parsing')
     setFileName(sourceName)
 
-    let full = ''
+    let result = null
     try {
-      const gen = streamChat({
-        provider: settings.provider,
-        apiKey: settings.apiKey,
-        model: settings.model,
-        messages: [{ role: 'user', content: buildParsePrompt(text) }],
-        system: RESUME_PARSER_SYSTEM,
+      result = await runTextSkill({
+        skill: resumeParserSkill,
+        settings,
+        input: { resumeText: text },
       })
-      for await (const chunk of gen) full += chunk
     } catch (err) {
       setErrorMsg(`AI 解析失败：${err.message}`)
+      setShowTextInput(true)
+      setStep('error')
+      return
+    }
+    if (!result?.experiences?.length) {
+      setErrorMsg('未识别到工作/实习经历，请检查简历格式，或手动做经历调研。')
+      setShowTextInput(true)
       setStep('error')
       return
     }
 
-    const result = parseJsonFromText(full)
-    if (!result?.experiences?.length) {
-      setErrorMsg('未识别到工作/实习经历，请检查简历格式，或手动整理经历。')
-      setStep('error')
-      return
-    }
+    if (result.profile) saveProfile(result.profile)
+    saveOriginalResume({
+      sourceName,
+      rawText: text,
+      profile: result.profile || {},
+      sourceSections: result.sourceSections || [],
+      experiences: result.experiences || [],
+    })
 
     // 3. Bulk-save all to library with status='imported', then go to library
     bulkImportExperiences(result.experiences)
     refreshExperiences()
+    clearDraft(DRAFT_KEYS.resumeImport)
     navigate('/library', { state: { justImported: result.experiences.length } })
   }, [settings, refreshExperiences, navigate])
 
@@ -78,6 +97,7 @@ export default function ImportPage() {
 
     let text = ''
     try {
+      const { extractTextFromPDF } = await import('../utils/pdfExtract')
       const result = await extractTextFromPDF(file)
       text = result.text
       if (result.skippedPages?.length) {
@@ -95,6 +115,7 @@ export default function ImportPage() {
       return
     }
 
+    setResumeText(text)
     await parseResumeText(text, file.name)
   }, [isConfigured, parseResumeText, setShowSettings])
 
@@ -111,14 +132,43 @@ export default function ImportPage() {
     if (file) handleFile(file)
   }
 
+  const handleClearImportDraft = () => {
+    clearDraft(DRAFT_KEYS.resumeImport)
+    setResumeText('')
+    setShowTextInput(false)
+    setFileName('')
+    setErrorMsg('')
+    setParseNote('')
+    setStep('upload')
+    setDraftUpdatedAt('')
+    setRestoredDraft(false)
+  }
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-base font-semibold text-gray-900">导入简历</h1>
-        <p className="text-xs text-gray-400 mt-1">
-          上传 PDF，自动识别所有经历并存入经历库，然后按需深度整理
-        </p>
-      </div>
+    <div className="prep-bg">
+      <main className="prep-shell">
+      <PathHeader
+        current="import"
+        title="简历导入"
+        subtitle="把已有 PDF 或文本简历解析成基础信息和原始经历，作为后续调研的入口。"
+      />
+      <div className="mx-auto max-w-2xl">
+
+      {resumeText.trim() && draftUpdatedAt && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-[#b6ffdd]/70 bg-[#ecfff5]/80 px-4 py-3">
+          <div>
+            <p className="text-sm font-black text-[#16704a]">
+              {restoredDraft ? '已恢复上次未完成的导入文本' : '导入文本已自动保存到本机'}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-[#6f667d]">
+              保存于 {formatDraftTime(draftUpdatedAt)}，可以继续识别。
+            </p>
+          </div>
+          <button onClick={handleClearImportDraft} className="prep-ghost shrink-0">
+            清除草稿
+          </button>
+        </div>
+      )}
 
       {(step === 'upload' || step === 'error') && (
         <>
@@ -128,11 +178,13 @@ export default function ImportPage() {
             onClick={() => isConfigured ? fileInputRef.current?.click() : setShowSettings(true)}
             className="border-2 border-dashed border-gray-200 rounded-2xl p-14 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all"
           >
-            <div className="text-4xl mb-3">📄</div>
+            <div className="mx-auto mb-3 flex h-12 w-10 items-center justify-center rounded-xl border-2 border-violet-200 bg-white text-xs font-black text-violet-500">
+              PDF
+            </div>
             <p className="text-sm font-medium text-gray-700">点击上传或拖拽 PDF 简历</p>
-            <p className="text-xs text-gray-400 mt-1">识别完成后自动存入经历库</p>
+            <p className="text-xs text-gray-400 mt-1">识别完成后自动存入经历资产和基础信息</p>
             {!isConfigured && (
-              <p className="text-xs text-orange-500 mt-2">⚠️ 请先设置 API Key</p>
+              <p className="text-xs text-orange-500 mt-2">请先设置 API Key</p>
             )}
           </div>
           <input
@@ -154,9 +206,12 @@ export default function ImportPage() {
             <div className="mt-3 rounded-2xl border border-gray-100 bg-white p-4">
               <textarea
                 value={resumeText}
-                onChange={e => setResumeText(e.target.value)}
+                onChange={e => {
+                  setResumeText(e.target.value)
+                  setRestoredDraft(false)
+                }}
                 rows={10}
-                placeholder="把简历全文复制到这里，系统会自动识别工作/实习/项目经历并存入经历库。"
+                placeholder="把简历全文复制到这里，系统会自动识别基础信息、教育、技能和经历。"
                 className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               />
               <div className="mt-3 flex items-center justify-between gap-3">
@@ -194,6 +249,8 @@ export default function ImportPage() {
           </div>
         </div>
       )}
+      </div>
+      </main>
     </div>
   )
 }

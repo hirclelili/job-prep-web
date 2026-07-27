@@ -1,65 +1,84 @@
 import React from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
+import { getProviderConfig } from '../services/llm'
 
-const tabs = [
-  { to: '/experience', label: '整理经历', icon: '✍️' },
-  { to: '/battle-plan', label: '备战面试', icon: '🎯' },
-  { to: '/library', label: '经历库', icon: '📁' },
-  { to: '/jobs', label: '岗位库', icon: '💼' },
+const navItems = [
+  {
+    label: '我的经历',
+    to: '/library',
+    match: pathname => ['/import', '/experience', '/library'].includes(pathname),
+  },
+  {
+    label: '投递准备',
+    to: '/directions',
+    match: pathname => pathname === '/directions' || pathname === '/resumes',
+  },
+  {
+    label: '岗位',
+    to: '/jobs',
+    match: pathname => pathname === '/jobs' || (pathname.startsWith('/jobs/') && !pathname.endsWith('/prepare')),
+  },
+  {
+    label: '面试准备',
+    to: '/interviews',
+    match: pathname => pathname === '/interviews' || pathname === '/battle-plan' || pathname.endsWith('/prepare'),
+  },
 ]
 
 export default function NavBar() {
+  const location = useLocation()
   const { isConfigured, settings, setShowSettings } = useApp()
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-4 sticky top-0 z-40">
-      {/* Logo */}
-      <Link to="/" className="flex items-center gap-2 mr-4 rounded-lg px-1.5 py-1 hover:bg-gray-50 transition-colors">
-        <span className="text-lg">🚀</span>
-        <span className="font-semibold text-gray-900 text-sm whitespace-nowrap">求职备战助手</span>
-      </Link>
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center gap-4 px-6">
+        <Link to="/" className="group flex shrink-0 items-center gap-3 rounded-2xl pr-2 text-base font-semibold tracking-tight text-violet-950">
+          <span className="relative h-9 w-9 rounded-xl bg-[#161226]">
+            <span className="absolute left-2 top-2 h-2.5 w-2.5 rounded-full bg-[#ec4899]" />
+            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-[#0891b2]" />
+            <span className="absolute bottom-2 left-3.5 h-2.5 w-2.5 rounded-full bg-[#f59e0b]" />
+          </span>
+          <span className="leading-tight">
+            <span className="block">求职准备</span>
+          </span>
+        </Link>
 
-      {/* Tabs */}
-      <nav className="flex items-center gap-1">
-        {tabs.map(tab => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 font-medium'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-              }`
-            }
-          >
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </NavLink>
-        ))}
-      </nav>
+        <nav className="flex min-w-0 flex-1 items-center justify-center gap-1">
+          {navItems.map(item => {
+            const active = item.match(location.pathname)
+            return (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                  active
+                    ? 'bg-slate-950 text-white'
+                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950'
+                }`}
+              >
+                {item.label}
+              </NavLink>
+            )
+          })}
+        </nav>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
-      {/* Settings button */}
-      <button
-        onClick={() => setShowSettings(true)}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all ${
-          isConfigured
-            ? 'text-gray-500 hover:bg-gray-50'
-            : 'bg-orange-50 text-orange-600 font-medium hover:bg-orange-100'
-        }`}
-      >
-        <span>⚙️</span>
-        <span>
-          {isConfigured
-            ? `${settings.provider?.toUpperCase()} · ${settings.model}`
-            : '设置 API Key'}
-        </span>
-        {!isConfigured && <span className="w-2 h-2 rounded-full bg-orange-400" />}
-      </button>
+        <button
+          onClick={() => setShowSettings(true)}
+          className={`flex max-w-[260px] items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition-all ${
+            isConfigured
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300'
+              : 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+          }`}
+        >
+          <span className={`h-2 w-2 shrink-0 rounded-full ${isConfigured ? 'bg-emerald-500' : 'bg-orange-400'}`} />
+          <span className="truncate">
+            {isConfigured
+              ? `${getProviderConfig(settings).name} · ${settings.model}`
+              : '设置 API Key'}
+          </span>
+        </button>
+      </div>
     </header>
   )
 }

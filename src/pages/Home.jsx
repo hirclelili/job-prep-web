@@ -1,152 +1,261 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getJobs } from '../utils/storage'
+import { getJobs, getProfile, getResumes } from '../utils/storage'
 import { useApp } from '../contexts/AppContext'
 
-const actions = [
+const modules = [
   {
-    title: '整理经历',
-    desc: '通过 AI 追问，把一段口述经历整理成简历条目、STAR 故事、亮点和追问素材。',
-    detail: '适合在投递前先把自己的项目、实习、校园经历打磨清楚。',
-    icon: '✍️',
-    to: '/experience',
+    title: '我的经历',
+    action: '第一步',
+    description: '导入简历，深挖单段经历，沉淀可复用的经历资产。',
+    path: '/library',
+    colors: ['#55dff1', '#ff5cc8', '#fff04a'],
+    visual: 'experience',
+    entries: [
+      { label: '简历导入', path: '/import' },
+      { label: '经历调研', path: '/experience' },
+      { label: '经历资产', path: '/library' },
+    ],
   },
   {
-    title: '备战面试',
-    desc: '粘贴 JD 后，先做岗位拆解，再生成面试手册和知识体系。',
-    detail: '适合针对某个具体岗位做匹配诊断、问题预测和业务知识补课。',
-    icon: '🎯',
-    to: '/battle-plan',
+    title: '投递准备',
+    action: '第二步',
+    description: '判断岗位方向，生成可以投递的简历版本。',
+    path: '/resumes',
+    colors: ['#ff5cc8', '#b6ffdd', '#725cff'],
+    visual: 'delivery',
+    entries: [
+      { label: '选岗位方向', path: '/directions' },
+      { label: '简历版本', path: '/resumes' },
+    ],
   },
   {
-    title: '经历库',
-    desc: '保存你已经整理好的经历，也可以从 PDF 简历批量导入经历。',
-    detail: '这些经历会在生成面试手册时作为真实素材注入上下文。',
-    icon: '📁',
-    to: '/library',
+    title: '岗位',
+    action: '第三步',
+    description: '保存多个 JD，把每个岗位对应的简历版本和面试材料沉淀成索引。',
+    path: '/jobs',
+    colors: ['#8c6bff', '#50d7e6', '#ffe66d'],
+    visual: 'interview',
+    entries: [
+      { label: '岗位列表', path: '/jobs' },
+      { label: 'JD 详情', path: '/jobs' },
+      { label: '岗位材料', path: '/jobs' },
+    ],
   },
   {
-    title: '岗位库',
-    desc: '按公司和岗位保存每一次准备结果，之后可以继续生成或更新。',
-    detail: '一条岗位记录包含聊天、面试手册、知识体系和更新时间。',
-    icon: '💼',
-    to: '/jobs',
+    title: '面试准备',
+    action: '第四步',
+    description: '选择具体岗位，进入面试手册和知识体系的生成工作区。',
+    path: '/interviews',
+    colors: ['#50d7e6', '#b6ffdd', '#ff5cc8'],
+    visual: 'interview',
+    entries: [
+      { label: '选择岗位', path: '/interviews' },
+      { label: '面试手册', path: '/interviews' },
+      { label: '知识体系', path: '/interviews' },
+    ],
   },
 ]
 
-const flow = [
-  '先把经历整理进经历库',
-  '粘贴目标岗位 JD',
-  '确认 JD 拆解并生成面试手册',
-  '单独生成知识体系',
-  '保存到岗位库，持续更新',
+const flowSteps = [
+  {
+    title: '导入简历',
+    desc: '上传 PDF 或粘贴文本，先把基础信息和经历拆出来。',
+    path: '/import',
+    color: '#55dff1',
+  },
+  {
+    title: '经历调研',
+    desc: '对每段经历继续追问，补全背景、行动、结果和细节。',
+    path: '/experience',
+    color: '#ff5cc8',
+  },
+  {
+    title: '经历资产',
+    desc: '沉淀 STAR、亮点、能力标签和可复用 bullet。',
+    path: '/library',
+    color: '#fff04a',
+  },
+  {
+    title: '投递材料',
+    desc: '选择岗位方向，生成对应的简历版本。',
+    path: '/resumes',
+    color: '#b6ffdd',
+  },
+  {
+    title: '岗位 JD',
+    desc: '保存具体岗位，后续按这个岗位准备。',
+    path: '/jobs',
+    color: '#725cff',
+  },
+  {
+    title: '面试准备',
+    desc: '选择具体岗位，再生成面试手册和知识体系。',
+    path: '/interviews',
+    color: '#50d7e6',
+  },
 ]
+
+function ThemeVisual({ type, colors }) {
+  if (type === 'experience') {
+    return (
+      <div className="home-visual home-visual-experience" aria-hidden="true">
+        <div className="home-doc-card">
+          <span className="home-doc-line home-doc-line-strong" />
+          <span className="home-doc-line" />
+          <span className="home-doc-line home-doc-line-short" />
+          <div className="home-tag-row">
+            <span style={{ backgroundColor: colors[0] }} />
+            <span style={{ backgroundColor: colors[2] }} />
+          </div>
+        </div>
+        <div className="home-question-card" style={{ backgroundColor: colors[1] }}>
+          <span>Q</span>
+        </div>
+        <div className="home-star-card" style={{ backgroundColor: colors[2] }}>
+          <span>S</span>
+          <span>T</span>
+          <span>A</span>
+          <span>R</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (type === 'delivery') {
+    return (
+      <div className="home-visual home-visual-delivery" aria-hidden="true">
+        <div className="home-target-card" style={{ backgroundColor: colors[0] }}>
+          <span className="home-target-ring" />
+          <span className="home-target-dot" />
+        </div>
+        <div className="home-resume-stack">
+          <span className="home-stack-back" />
+          <span className="home-stack-front">
+            <i />
+            <i />
+            <i />
+          </span>
+        </div>
+        <div className="home-jd-chip" style={{ backgroundColor: colors[2] }}>
+          JD
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="home-visual home-visual-interview" aria-hidden="true">
+      <div className="home-manual-card" style={{ backgroundColor: colors[0] }}>
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="home-chat-card" style={{ backgroundColor: colors[1] }}>
+        <span className="home-chat-line" />
+        <span className="home-chat-line home-chat-line-short" />
+      </div>
+      <div className="home-knowledge-map">
+        <span className="home-node home-node-a" style={{ backgroundColor: colors[2] }} />
+        <span className="home-node home-node-b" style={{ backgroundColor: colors[1] }} />
+        <span className="home-node home-node-c" style={{ backgroundColor: colors[0] }} />
+      </div>
+    </div>
+  )
+}
+
+function ModuleTile({ module, index }) {
+  const navigate = useNavigate()
+
+  return (
+    <article className="home-tile" style={{ '--tile-color': module.colors[0], '--tile-soft': module.colors[1] }}>
+      <button onClick={() => navigate(module.path)} className="home-tile-main">
+        <div className="home-tile-top">
+          <span className="home-tile-index">{String(index + 1).padStart(2, '0')}</span>
+          <ThemeVisual type={module.visual} colors={module.colors} />
+        </div>
+        <div>
+          <p className="home-tile-action">{module.action}</p>
+          <h2 className="home-tile-title">{module.title}</h2>
+          <p className="home-tile-desc">{module.description}</p>
+        </div>
+      </button>
+
+      <div className="home-entry-grid">
+        {module.entries.map(entry => (
+          <button key={entry.label} onClick={() => navigate(entry.path)} className="home-entry">
+            {entry.label}
+          </button>
+        ))}
+      </div>
+    </article>
+  )
+}
 
 export default function Home() {
   const navigate = useNavigate()
   const { isConfigured, setShowSettings, experiences } = useApp()
+  const resumes = getResumes()
   const jobs = getJobs()
+  const profile = getProfile()
+  const hasProfile = !!(profile.name || profile.email || profile.phone)
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <section className="mb-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="home-dopamine">
+      <main className="home-shell">
+        <section className="home-hero">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">求职备战助手</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-500">
-              这是一个本地化的求职准备工作台：左边沉淀你的真实经历，右边围绕具体岗位生成面试手册、知识体系，并按岗位归档。
-            </p>
+            <h1 className="home-title">实习求职助手</h1>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/experience')}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-            >
-              开始整理经历
+          <div className="home-hero-actions">
+            <button onClick={() => navigate('/import')} className="home-primary">
+              导入简历
             </button>
-            <button
-              onClick={() => navigate('/battle-plan')}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50"
-            >
-              粘贴 JD 备战
+            {!isConfigured && (
+              <button onClick={() => setShowSettings(true)} className="home-secondary">
+                设置 API Key
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="home-flow" aria-label="使用流程">
+          {flowSteps.map((step, index) => (
+            <button key={step.title} onClick={() => navigate(step.path)} className="home-flow-step">
+              <span className="home-flow-dot" style={{ backgroundColor: step.color }} />
+              <span className="home-flow-index">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{step.title}</strong>
+              <span>{step.desc}</span>
             </button>
-          </div>
-        </div>
-      </section>
+          ))}
+        </section>
 
-      {!isConfigured && (
-        <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-200 flex items-center gap-3">
-          <span className="text-xl shrink-0">⚠️</span>
-          <div className="flex-1 text-sm">
-            <p className="font-medium text-orange-800">先设置 API Key</p>
-            <p className="text-orange-600 text-xs mt-0.5">支持 DeepSeek、OpenAI、Kimi、通义千问、Claude，Key 只保存在本地浏览器。</p>
-          </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="px-3 py-1.5 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 shrink-0"
-          >
-            去设置
-          </button>
-        </div>
-      )}
+        <section className="home-grid">
+          {modules.map((module, index) => (
+            <ModuleTile key={module.title} module={module} index={index} />
+          ))}
+        </section>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <div className="rounded-xl border border-gray-100 bg-white p-4">
-          <p className="text-xs text-gray-400">已整理经历</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{experiences.length}</p>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white p-4">
-          <p className="text-xs text-gray-400">已保存岗位</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">{jobs.length}</p>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white p-4 md:col-span-2">
-          <p className="text-xs text-gray-400">推荐流程</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {flow.map((item, i) => (
-              <span key={item} className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
-                <span className="text-gray-400">{i + 1}</span>
-                {item}
-              </span>
+        <section className="home-footer-row">
+          <div className="home-stats">
+            {[
+              ['经历', experiences.length],
+              ['简历', resumes.length],
+              ['岗位', jobs.length],
+              ['信息', hasProfile ? '已识别' : '未整理'],
+            ].map(([label, value]) => (
+              <div key={label} className="home-stat">
+                <p>{label}</p>
+                <strong>{value}</strong>
+              </div>
             ))}
           </div>
-        </div>
-      </div>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        {actions.map(action => (
-          <button
-            key={action.to}
-            onClick={() => navigate(action.to)}
-            className="text-left rounded-xl border border-gray-100 bg-white p-5 hover:border-blue-200 hover:shadow-sm transition-all"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center text-xl shrink-0">
-                {action.icon}
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold text-gray-900">{action.title}</h2>
-                <p className="mt-1 text-sm leading-6 text-gray-600">{action.desc}</p>
-                <p className="mt-2 text-xs leading-5 text-gray-400">{action.detail}</p>
-              </div>
-            </div>
-          </button>
-        ))}
-      </section>
-
-      <section className="mt-6 rounded-xl border border-amber-100 bg-amber-50/70 p-5">
-        <div className="flex gap-3">
-          <span className="text-xl shrink-0">🔒</span>
-          <div>
-            <h2 className="text-sm font-semibold text-amber-900">数据保存说明</h2>
-            <p className="mt-1 text-sm leading-6 text-amber-800">
-              你的经历、岗位记录、面试手册、知识体系和 API Key 都保存在当前浏览器本地，不会上传到这个网页自己的服务器。
-            </p>
-            <p className="mt-2 text-xs leading-5 text-amber-700">
-              如果清理浏览器数据、更换浏览器或设备、使用隐身模式、卸载浏览器，或者浏览器自动清理站点数据，这些内容可能会消失。重要的面试手册和知识体系建议用页面里的“复制”按钮备份到自己的文档。
-            </p>
-          </div>
-        </div>
-      </section>
+          <p className="home-note">
+            数据保存在当前浏览器本地。清理浏览器数据、更换设备或使用隐身模式时可能消失，重要内容建议导出或复制到自己的文档。
+          </p>
+        </section>
+      </main>
     </div>
   )
 }

@@ -15,12 +15,29 @@
 
 调用 AI 时，请求内容会发送给用户在设置里选择的模型服务商。
 
+搜索能力只在生成岗位相关简历和面试材料时按需调用，用于补充公司、业务和同类岗位公开信息。搜索结果不能替代用户经历事实；搜索不可用时，生成流程会自动跳过搜索继续运行。
+
+## 搜索服务配置
+
+搜索 Key 只配置在服务端，不会出现在网页设置或浏览器存储里。Vercel 项目需要添加：
+
+```text
+SEARCH_PROVIDER=tavily
+SEARCH_API_KEY=你的搜索服务Key
+```
+
+`SEARCH_PROVIDER` 支持 `tavily`、`brave`、`serper`，默认是 `tavily`。修改环境变量后需要重新部署一次。
+
+没有配置搜索 Key 时，`/api/search` 会返回跳过状态，简历和面试功能仍可正常使用。
+
 ## 本地运行
 
 ```bash
 npm install
 npm run dev
 ```
+
+`npm run dev` 只启动前端，因此本地会自动跳过服务端搜索。需要在本地同时测试 `/api/search` 时，使用 Vercel CLI 启动项目并在本地环境变量中配置搜索 Key。
 
 ## 构建
 
