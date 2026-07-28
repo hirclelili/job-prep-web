@@ -326,8 +326,7 @@ function ContinueWorkspace({ experiences, resumes, jobs, resumeDraft, importDraf
     <section className="home-workspace">
       <div className="home-workspace-heading">
         <div>
-          <span>继续处理</span>
-          <h2>回到上次停下的位置</h2>
+          <h2>继续处理</h2>
         </div>
         <div className="home-workspace-counts">
           <span>{experiences.length} 段经历</span>
