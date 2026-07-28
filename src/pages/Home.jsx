@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJobs, getResumes } from '../utils/storage'
 import { DRAFT_KEYS, formatDraftTime, readDraft } from '../utils/draftStorage'
 import { useApp } from '../contexts/AppContext'
+import HomeProductDemo from '../components/HomeProductDemo'
 
 const flowSteps = [
   {
@@ -43,27 +44,6 @@ const flowSteps = [
   },
 ]
 
-const demoStages = [
-  { label: '原始条目', color: '#55dff1' },
-  { label: '经历调研', color: '#ff5cc8' },
-  { label: '多场景复用', color: '#fff04a' },
-]
-
-const demoOutputs = {
-  product: {
-    label: '产品方向简历',
-    text: '围绕新用户关键行为完成率低的问题，拆解首周用户路径并定位任务链路与触达时机，设计分层任务和对照实验方案，通过关键行为转化率与留存指标验证策略。',
-  },
-  operation: {
-    label: '运营方向简历',
-    text: '按新用户激活状态建立分层运营策略，设计首周任务、阶段触达与激励机制，并结合任务完成率和留存指标持续复盘。',
-  },
-  interview: {
-    label: '面试回答',
-    text: '当时新用户注册后关键行为完成率偏低。我先拆解首周路径，发现问题不只是激励不足，而是任务过长、触达时机不准确。随后按激活状态分层，重构首周任务并设置对照实验，用任务完成率、关键行为转化率和次日留存判断方案是否有效。',
-  },
-}
-
 function getTimeValue(item) {
   return new Date(item?.updatedAt || item?.savedAt || item?.createdAt || 0).getTime() || 0
 }
@@ -76,148 +56,6 @@ function hasMeaningfulResumeDraft(draft) {
     || data.confirmedStrategy
     || data.customTarget?.trim()
     || data.jdText?.trim()
-  )
-}
-
-function ExperienceReuseDemo() {
-  const [stage, setStage] = useState(0)
-  const [outputKey, setOutputKey] = useState('product')
-  const [paused, setPaused] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
-
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => setReducedMotion(query.matches)
-    update()
-    query.addEventListener?.('change', update)
-    return () => query.removeEventListener?.('change', update)
-  }, [])
-
-  useEffect(() => {
-    if (paused || reducedMotion) return undefined
-    const timer = window.setInterval(() => setStage(current => (current + 1) % demoStages.length), 4800)
-    return () => window.clearInterval(timer)
-  }, [paused, reducedMotion])
-
-  useEffect(() => {
-    if (stage !== 2 || paused || reducedMotion) return undefined
-    const keys = Object.keys(demoOutputs)
-    const timer = window.setInterval(() => {
-      setOutputKey(current => keys[(keys.indexOf(current) + 1) % keys.length])
-    }, 2700)
-    return () => window.clearInterval(timer)
-  }, [stage, paused, reducedMotion])
-
-  return (
-    <section
-      className="home-demo"
-      aria-label="经历复用示例"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      <div className="home-demo-heading">
-        <div>
-          <span className="home-demo-kicker">示例演示</span>
-          <h2>一段经历，如何变成可复用的求职素材</h2>
-          <p>不是替你编内容，而是把已有经历里的问题、判断、行动和证据问清楚。</p>
-        </div>
-        <div className="home-demo-tabs" role="tablist" aria-label="演示阶段">
-          {demoStages.map((item, index) => (
-            <button
-              key={item.label}
-              type="button"
-              role="tab"
-              aria-selected={stage === index}
-              className={stage === index ? 'is-active' : ''}
-              onClick={() => setStage(index)}
-              style={{ '--stage-color': item.color }}
-            >
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className={`home-demo-canvas home-demo-stage-${stage}`} key={stage}>
-        {stage === 0 && (
-          <div className="home-demo-raw">
-            <div className="home-demo-resume">
-              <span className="home-demo-section-name">经历</span>
-              <div className="home-demo-resume-title">
-                <strong>某内容平台</strong>
-                <span>用户运营</span>
-              </div>
-              <p>负责新用户活动运营，通过任务激励提升用户活跃。</p>
-            </div>
-            <div className="home-demo-observation">
-              <span>目前能看见什么</span>
-              <strong>做了活动</strong>
-              <strong>用了任务激励</strong>
-              <p>但还不知道为什么做、你如何判断、具体做了什么，也没有结果证据。</p>
-            </div>
-          </div>
-        )}
-
-        {stage === 1 && (
-          <div className="home-demo-research">
-            <div className="home-demo-question">
-              <span>AI 本轮追问</span>
-              <strong>新用户当时卡在哪个关键行为？你怎么判断问题出在任务路径，而不只是奖励力度？</strong>
-            </div>
-            <div className="home-demo-facts">
-              {[
-                ['业务问题', '新用户注册后没有完成关键行为，后续留存较低。'],
-                ['个人判断', '问题不只是奖励不足，而是首周任务路径过长、触达时机不准确。'],
-                ['关键行动', '重构首周任务链路，按激活状态分层，并为不同阶段配置触达和激励。'],
-                ['验证方式', '用任务完成率、关键行为转化率、次日留存和对照实验验证策略。'],
-              ].map(([label, text], index) => (
-                <div key={label} className="home-demo-fact" style={{ '--fact-index': index }}>
-                  <span>{label}</span>
-                  <p>{text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {stage === 2 && (
-          <div className="home-demo-output">
-            <div className="home-demo-evidence">
-              <span>同一组确认事实</span>
-              {['新用户关键行为', '首周任务路径', '用户状态分层', '对照实验与留存'].map(item => (
-                <strong key={item}>{item}</strong>
-              ))}
-            </div>
-            <div className="home-demo-version">
-              <div className="home-demo-output-tabs" role="tablist" aria-label="输出类型">
-                {Object.entries(demoOutputs).map(([key, item]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={outputKey === key}
-                    className={outputKey === key ? 'is-active' : ''}
-                    onClick={() => setOutputKey(key)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div className="home-demo-output-copy" key={outputKey}>
-                <span>{demoOutputs[outputKey].label}</span>
-                <p>{demoOutputs[outputKey].text}</p>
-              </div>
-              <p className="home-demo-output-note">事实不变，只调整选材、重点和表达方式。</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="home-demo-progress" aria-hidden="true">
-        <span key={stage} style={{ '--progress-duration': reducedMotion ? '0s' : '4.8s' }} />
-      </div>
-    </section>
   )
 }
 
@@ -421,10 +259,10 @@ export default function Home() {
             onToggleDemo={() => setShowReturningUserDemo(current => !current)}
           />
         ) : (
-          <ExperienceReuseDemo />
+          <HomeProductDemo />
         )}
 
-        {hasWorkspace && showReturningUserDemo && <ExperienceReuseDemo />}
+        {hasWorkspace && showReturningUserDemo && <HomeProductDemo />}
 
         <p className="home-note">
           数据保存在当前浏览器本地。清理浏览器数据、更换设备或使用隐身模式时可能消失，重要内容建议导出或复制到自己的文档。
