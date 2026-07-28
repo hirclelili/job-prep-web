@@ -143,7 +143,9 @@ export default function AgentWorkspacePanel({
   quickActions = [],
   autoSendMessage,
   directSkillId = '',
+  demoState = null,
 }) {
+  const agent = useAgent()
   const {
     messages,
     streamingText,
@@ -156,7 +158,12 @@ export default function AgentWorkspacePanel({
     sendSkillChatMessage,
     setAgentContext,
     clearAgent,
-  } = useAgent()
+  } = agent
+  const visibleMessages = demoState?.messages ?? messages
+  const visibleStreamingText = demoState?.streamingText ?? streamingText
+  const visibleLoading = demoState?.loading ?? loading
+  const visibleToolEvents = demoState?.toolEvents ?? toolEvents
+  const visiblePendingApproval = demoState?.pendingApproval ?? pendingApproval
   const [input, setInput] = useState('')
   const [customChoice, setCustomChoice] = useState(null)
   const bottomRef = useRef(null)
@@ -165,10 +172,12 @@ export default function AgentWorkspacePanel({
   const contextKey = JSON.stringify(context || {})
 
   useEffect(() => {
+    if (demoState) return
     setAgentContext(context || {})
-  }, [contextKey, setAgentContext])
+  }, [contextKey, demoState, setAgentContext])
 
   useEffect(() => {
+    if (demoState) return
     const autoKey = `${context?.agentThreadId || ''}:${autoSendMessage || ''}`
     if (autoSendMessage && autoSentKeyRef.current !== autoKey) {
       autoSentKeyRef.current = autoKey
@@ -178,11 +187,11 @@ export default function AgentWorkspacePanel({
         sendAgentMessage(autoSendMessage)
       }
     }
-  }, [autoSendMessage, contextKey, directSkillId, sendAgentMessage, sendSkillChatMessage])
+  }, [autoSendMessage, contextKey, demoState, directSkillId, sendAgentMessage, sendSkillChatMessage])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingText, toolEvents])
+  }, [visibleMessages, visibleStreamingText, visibleToolEvents])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -193,12 +202,14 @@ export default function AgentWorkspacePanel({
 
   const submit = (text = input, options = {}) => {
     const value = text.trim()
-    if (!value || loading) return
+    if (!value || visibleLoading) return
     const shouldUseCustomChoice = options.useCustom !== false
     const payload = shouldUseCustomChoice && customChoice
       ? `我选择了 ${customChoice.label}，补充真实情况：${value}`
       : value
-    if (directSkillId) {
+    if (demoState) {
+      demoState.onSubmit?.(payload)
+    } else if (directSkillId) {
       sendSkillChatMessage(payload, directSkillId, context || {})
     } else {
       sendAgentMessage(payload)
@@ -208,6 +219,10 @@ export default function AgentWorkspacePanel({
   }
 
   const handleChoiceSelect = option => {
+    if (demoState) {
+      demoState.onChoiceSelect?.(option)
+      return
+    }
     if (isCustomChoice(option)) {
       setCustomChoice(option)
       setInput('')
@@ -228,7 +243,7 @@ export default function AgentWorkspacePanel({
   return (
     <div className="flex h-full flex-col bg-transparent">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        {messages.length === 0 && !loading && (
+        {visibleMessages.length === 0 && !visibleLoading && (
           <div className="prep-panel-tight flex h-full flex-col justify-center px-5 py-8 text-center">
             <p className="text-sm font-black text-[#171321]">{emptyTitle}</p>
             <p className="mt-2 text-xs font-semibold leading-5 text-[#8a8296]">{emptyText}</p>
@@ -236,33 +251,34 @@ export default function AgentWorkspacePanel({
         )}
 
         <div className="space-y-4">
-          {messages.filter(message => !message.hidden).map((message, index) => (
+          {visibleMessages.filter(message => !message.hidden).map((message, index) => (
             <AgentWorkspaceMessage
               key={`${message.role}-${index}`}
               message={message}
               onChoiceSelect={handleChoiceSelect}
+              loading={visibleLoading}
             />
           ))}
         </div>
 
-        {pendingApproval && (
+        {visiblePendingApproval && (
           <div className="mt-4 rounded-2xl border border-[#fff04a]/70 bg-[#fff9b7]/70 px-4 py-3">
             <p className="text-xs font-black text-[#9a5a00]">需要确认后执行</p>
-            <p className="mt-1 text-sm font-black text-[#171321]">{pendingApproval.label || pendingApproval.tool}</p>
-            {pendingApproval.reason && (
-              <p className="mt-1 text-xs font-semibold leading-5 text-[#6f667d]">{pendingApproval.reason}</p>
+            <p className="mt-1 text-sm font-black text-[#171321]">{visiblePendingApproval.label || visiblePendingApproval.tool}</p>
+            {visiblePendingApproval.reason && (
+              <p className="mt-1 text-xs font-semibold leading-5 text-[#6f667d]">{visiblePendingApproval.reason}</p>
             )}
             <div className="mt-3 flex gap-2">
               <button
                 onClick={approvePendingTool}
-                disabled={loading}
+                disabled={visibleLoading}
                 className="prep-primary"
               >
                 确认执行
               </button>
               <button
                 onClick={cancelPendingTool}
-                disabled={loading}
+                disabled={visibleLoading}
                 className="prep-ghost"
               >
                 取消
@@ -271,9 +287,9 @@ export default function AgentWorkspacePanel({
           </div>
         )}
 
-        {toolEvents.length > 0 && (
+        {visibleToolEvents.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {toolEvents.map(event => (
+            {visibleToolEvents.map(event => (
               <span key={event.id} className={`prep-chip ${
                 event.status === 'error'
                   ? 'bg-red-50 text-red-500'
@@ -285,11 +301,11 @@ export default function AgentWorkspacePanel({
           </div>
         )}
 
-        {loading && (
+        {visibleLoading && (
           <div className="mt-4 rounded-2xl border border-[#55dff1]/40 bg-[#dffbff]/70 px-3 py-2 text-sm leading-6 text-[#41394d]">
-            {streamingText ? (
+            {visibleStreamingText ? (
               <div className="prose">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanAssistantDisplay(streamingText)}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanAssistantDisplay(visibleStreamingText)}</ReactMarkdown>
               </div>
             ) : (
               <span className="text-xs font-semibold text-[#8a8296]">正在读取当前状态…</span>
@@ -319,7 +335,7 @@ export default function AgentWorkspacePanel({
               <button
                 key={action.label}
                 onClick={() => submit(action.message)}
-                disabled={loading}
+                disabled={visibleLoading}
                 className="prep-secondary"
               >
                 {action.label}
@@ -335,12 +351,12 @@ export default function AgentWorkspacePanel({
             onKeyDown={handleKeyDown}
             placeholder={customChoice ? '直接补充你的真实情况…' : placeholder}
             rows={1}
-            disabled={loading}
+            disabled={visibleLoading}
             className="prep-input min-h-[40px] flex-1 resize-none px-3 py-2 text-sm disabled:bg-white/50"
           />
           <button
             onClick={() => submit()}
-            disabled={!input.trim() || loading}
+            disabled={!input.trim() || visibleLoading}
             className="prep-primary h-10"
           >
             发送
@@ -348,18 +364,22 @@ export default function AgentWorkspacePanel({
         </div>
         <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-[#8a8296]">
           <span>Enter 发送，Shift+Enter 换行</span>
-          <button onClick={clearAgent} className="hover:text-[#171321]">清空当前对话</button>
+          <button
+            onClick={demoState ? demoState.onClear : clearAgent}
+            className="hover:text-[#171321]"
+          >
+            清空当前对话
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-function AgentWorkspaceMessage({ message, onChoiceSelect }) {
+function AgentWorkspaceMessage({ message, onChoiceSelect, loading = false }) {
   const [selected, setSelected] = useState([])
   const isUser = message.role === 'user'
   const content = isUser ? message.content : cleanAssistantDisplay(message.content)
-  const { loading } = useAgent()
   const choice = !isUser ? splitChoiceContent(content) : { body: content, options: [] }
   const displayContent = isUser ? content : (choice.body || content)
   const choiceOptions = choice.options
