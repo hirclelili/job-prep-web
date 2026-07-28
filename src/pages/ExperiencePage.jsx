@@ -409,7 +409,15 @@ export default function ExperiencePage() {
     setSaved(false)   // new output → reset saved state, user must re-confirm
     localStorage.setItem(storageKeys.saved, 'false')
     const exp = extractExperienceJson(text)
-    const nextExp = normalizeExperienceAsset(exp || buildFallbackExp(readable, sourceExperience), readable, sourceExperience)
+    const fallback = buildFallbackExp(readable, sourceExperience)
+    const nextExp = normalizeExperienceAsset({
+      ...fallback,
+      ...(exp || {}),
+      resume_bullets: exp?.resume_bullets?.length ? exp.resume_bullets : fallback.resume_bullets,
+      full_story: exp?.full_story || fallback.full_story,
+      star_story: exp?.star_story || fallback.star_story,
+      interview_opening: exp?.interview_opening || fallback.interview_opening,
+    }, readable, sourceExperience)
     setParsedExp(nextExp)
     localStorage.setItem(storageKeys.asset, JSON.stringify(nextExp))
   }, [sourceExperience, storageKeys.asset, storageKeys.saved])

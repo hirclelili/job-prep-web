@@ -1,7 +1,12 @@
 import { experienceAssetStructuringSkill } from './assetSkills'
 import { battlePlanChatSkill, knowledgeAppendSkill, knowledgeSystemSkill, sectionRewriteSkill } from './battlePlanSkills'
 import { directionAnalysisSkill } from './directionSkills'
-import { experienceDeepDiveSkill, experienceSectionRewriteSkill } from './experienceSkills'
+import {
+  experienceDeepDiveSkill,
+  experienceDossierGenerateSkill,
+  experienceEvidenceSynthesisSkill,
+  experienceSectionRewriteSkill,
+} from './experienceSkills'
 import { jobOpportunityParseSkill } from './jobOpportunitySkills'
 import { resumeParserSkill } from './resumeParserSkill'
 import { resumeDirectionRecommendationSkill, resumeGenerateSkill, resumeLocalRewriteSkill, resumeReviewSkill, resumeStrategyRefineSkill, resumeStrategySkill } from './resumeSkills'
@@ -15,7 +20,12 @@ export const skillRegistry = [
   {
     stage: 'research',
     stageName: '经历调研',
-    skills: [experienceDeepDiveSkill, experienceSectionRewriteSkill],
+    skills: [
+      experienceDeepDiveSkill,
+      experienceEvidenceSynthesisSkill,
+      experienceDossierGenerateSkill,
+      experienceSectionRewriteSkill,
+    ],
   },
   {
     stage: 'assets',

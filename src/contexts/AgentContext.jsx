@@ -4,6 +4,7 @@ import { clearAgentThread, DEFAULT_AGENT_THREAD_ID, getAgentThread, saveAgentThr
 import { emitAgentArtifact } from '../agent/events'
 import { streamChat } from '../services/llm'
 import { getSkillById } from '../skills/registry'
+import { runTextSkill } from '../skills/core'
 import { getExperiences } from '../utils/storage'
 import { getJobSearchEnrichment } from '../services/search'
 import { useApp } from './AppContext'
@@ -26,13 +27,40 @@ function compactApprovalResult(result) {
 }
 
 function shouldPublishSkillArtifact(skillId, text) {
-  if (skillId === 'experience.deep_dive.chat') {
+  if (skillId === 'experience.deep_dive.chat' || skillId === 'experience.dossier.generate') {
     return text.includes('```json') || text.includes('# 完整经历档案')
   }
   if (skillId === 'battle_plan.manual.chat') {
     return text.includes('## JD 拆解') || text.includes('# 第一章') || text.includes('<!-- MANUAL_COMPLETE -->')
   }
   return false
+}
+
+function inferExperienceGenerationMode(content, threadMessages = []) {
+  const lastAssistant = [...threadMessages].reverse()
+    .find(message => message.role === 'assistant' && !message.hidden)?.content || ''
+  const isModeConfirmation = lastAssistant.includes('精准模式')
+    && lastAssistant.includes('增强模式')
+    && /生成|完整经历档案/.test(lastAssistant)
+  const value = String(content || '').trim()
+
+  if (/增强模式/.test(value) || (isModeConfirmation && /^B(?:[.．、):：\s]|$)/i.test(value))) {
+    return 'enhanced'
+  }
+  if (/精准模式/.test(value) || (isModeConfirmation && /^A(?:[.．、):：\s]|$)/i.test(value))) {
+    return 'precise'
+  }
+  if (/生成|输出|整理/.test(value) && /完整经历档案|经历档案/.test(value)) {
+    return 'precise'
+  }
+  return ''
+}
+
+function buildExperienceTranscript(messages = []) {
+  return messages
+    .filter(message => !message.hidden && ['user', 'assistant'].includes(message.role))
+    .map(message => `${message.role === 'user' ? '用户' : 'AI'}：\n${message.content || ''}`)
+    .join('\n\n---\n\n')
 }
 
 export function AgentProvider({ children }) {
@@ -218,35 +246,60 @@ export function AgentProvider({ children }) {
         }
         baseContext.searchContext = externalContext
       }
-      const userSkillMessage = skill.buildUserMessage({ ...baseContext, message: content })
-      const modelMessages = [
-        ...threadMessages.map(message => ({ role: message.role, content: message.content })),
-        ...(Array.isArray(userSkillMessage)
-          ? userSkillMessage
-          : [{ role: 'user', content: userSkillMessage }]),
-      ]
       let full = ''
-      const gen = streamChat({
-        ...settings,
-        system: skill.buildSystemPrompt(baseContext),
-        messages: modelMessages,
-      })
-      for await (const chunk of gen) {
-        full += chunk
-        setStreamingText(full)
+      let completedSkill = skill
+      const generationMode = skillId === 'experience.deep_dive.chat'
+        ? inferExperienceGenerationMode(content, threadMessages)
+        : ''
+
+      if (generationMode) {
+        const evidenceSkill = getSkillById('experience.evidence.synthesize')
+        const dossierSkill = getSkillById('experience.dossier.generate')
+        const transcript = buildExperienceTranscript(history)
+        setStreamingText('正在整理已确认信息，并检查各项目是否完整…')
+        const evidence = await runTextSkill({
+          skill: evidenceSkill,
+          settings,
+          input: { mode: generationMode, transcript },
+        })
+        completedSkill = dossierSkill
+        setStreamingText('事实底稿已整理，正在生成完整经历档案…')
+        full = await runTextSkill({
+          skill: dossierSkill,
+          settings,
+          input: { mode: generationMode, evidence },
+          onToken: setStreamingText,
+        })
+      } else {
+        const userSkillMessage = skill.buildUserMessage({ ...baseContext, message: content })
+        const modelMessages = [
+          ...threadMessages.map(message => ({ role: message.role, content: message.content })),
+          ...(Array.isArray(userSkillMessage)
+            ? userSkillMessage
+            : [{ role: 'user', content: userSkillMessage }]),
+        ]
+        const gen = streamChat({
+          ...settings,
+          system: skill.buildSystemPrompt(baseContext),
+          messages: modelMessages,
+        })
+        for await (const chunk of gen) {
+          full += chunk
+          setStreamingText(full)
+        }
       }
       const nextMessages = [...history, { role: 'assistant', content: full }]
       setMessages(nextMessages)
       saveAgentThread(nextMessages, targetThreadId)
 
       const artifactType = baseContext.artifactTarget
-      if (artifactType && shouldPublishSkillArtifact(skillId, full)) {
+      if (artifactType && shouldPublishSkillArtifact(completedSkill.id, full)) {
         emitAgentArtifact({
           type: artifactType,
-          title: baseContext.artifactTitle || skill.name,
+          title: baseContext.artifactTitle || completedSkill.name,
           content: full,
-          source: skill.id,
-          metadata: { skillId, page: baseContext.currentPath || '' },
+          source: completedSkill.id,
+          metadata: { skillId: completedSkill.id, page: baseContext.currentPath || '' },
         })
       }
     } catch (err) {
