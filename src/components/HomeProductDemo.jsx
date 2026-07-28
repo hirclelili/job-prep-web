@@ -316,9 +316,7 @@ export default function HomeProductDemo() {
     >
       <div className="product-demo-heading">
         <div>
-          <span>真实交互演示</span>
-          <h2>看一段普通经历，怎样被问清楚并用于简历</h2>
-          <p>演示使用固定示例数据，不调用 API，也不会写入你的经历库。</p>
+          <h2>经历深挖与复用</h2>
         </div>
         <div className="product-demo-controls">
           <span>{manual ? '自由体验' : step >= timeline.length ? '演示完成' : paused ? '已暂停' : '自动演示中'}</span>
