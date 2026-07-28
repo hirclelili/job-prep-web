@@ -211,6 +211,481 @@
 }
 
 @layer components {
+  .experience-workspace {
+    display: grid;
+    width: 100%;
+    max-width: 1180px;
+    height: calc(100vh - 64px);
+    grid-template-columns: minmax(0, 1fr) 390px;
+    overflow: hidden;
+    margin: 0 auto;
+    background:
+      linear-gradient(135deg, rgba(255, 92, 200, 0.08), transparent 32%),
+      linear-gradient(225deg, rgba(85, 223, 241, 0.10), transparent 34%),
+      #f5f3f7;
+  }
+
+  .experience-workspace.has-dossier {
+    grid-template-columns: 430px minmax(0, 1fr);
+  }
+
+  .experience-workspace-chat,
+  .experience-workspace-dossier {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .experience-workspace-chat {
+    border-right: 1px solid rgba(23, 19, 33, 0.08);
+    background: rgba(255, 255, 255, 0.58);
+    backdrop-filter: blur(16px);
+  }
+
+  .experience-workspace-dossier {
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(10px);
+  }
+
+  .experience-workspace-header {
+    display: flex;
+    min-height: 86px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid rgba(23, 19, 33, 0.08);
+    padding: 15px 20px;
+  }
+
+  .experience-workspace-header > div:first-child {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .experience-workspace-header > div:first-child > span {
+    color: #ff3eae;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .experience-workspace-header > div:first-child > strong {
+    margin-top: 3px;
+    color: #171321;
+    font-size: 22px;
+    line-height: 1.2;
+    font-weight: 900;
+  }
+
+  .experience-workspace.has-dossier .experience-workspace-header > div:first-child > strong {
+    font-size: 19px;
+  }
+
+  .experience-workspace-header > div:first-child > p {
+    margin-top: 3px;
+    color: #8a8296;
+    font-size: 11px;
+    line-height: 1.45;
+    font-weight: 650;
+  }
+
+  .experience-workspace-action {
+    flex-shrink: 0;
+  }
+
+  .experience-workspace-chat-body {
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .experience-workspace.is-compact {
+    height: 100%;
+    max-width: none;
+    grid-template-columns: minmax(0, 1.18fr) minmax(310px, 0.82fr);
+    background: transparent;
+  }
+
+  .experience-workspace.is-compact .experience-workspace-header {
+    min-height: 76px;
+    padding: 12px 22px;
+  }
+
+  .experience-workspace.is-compact .experience-workspace-header > div:first-child > span {
+    font-size: 9px;
+  }
+
+  .experience-workspace.is-compact .experience-workspace-header > div:first-child > strong {
+    font-size: 20px;
+  }
+
+  .experience-workspace.is-compact .experience-workspace-header > div:first-child > p {
+    font-size: 10px;
+  }
+
+  .experience-choice-panel {
+    margin-top: 12px;
+    border: 1px solid rgba(23, 19, 33, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.56);
+    padding: 10px;
+  }
+
+  .experience-choice-panel > p {
+    margin-bottom: 9px;
+    padding: 0 2px;
+    color: #aaa3b4;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .experience-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+  }
+
+  .experience-choice-grid > button {
+    display: grid;
+    min-height: 64px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    border: 1px solid rgba(23, 19, 33, 0.10);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.88);
+    padding: 10px 12px;
+    color: #41394d;
+    text-align: left;
+    box-shadow: 0 3px 10px rgba(62, 48, 86, 0.04);
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  }
+
+  .experience-choice-grid > button:hover,
+  .experience-choice-grid > button.is-selected {
+    border-color: rgba(114, 92, 255, 0.42);
+    background: #f0edff;
+    transform: translateY(-1px);
+    box-shadow: 4px 4px 0 rgba(114, 92, 255, 0.12);
+  }
+
+  .experience-choice-grid > button:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+    transform: none;
+  }
+
+  .experience-choice-grid b {
+    display: flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #f1eff5;
+    color: #756d82;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .experience-choice-grid button.is-selected b {
+    background: #725cff;
+    color: #ffffff;
+  }
+
+  .experience-choice-grid button > span {
+    color: inherit;
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 750;
+  }
+
+  .experience-choice-confirm {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .experience-choice-confirm button {
+    min-height: 36px;
+    border-radius: 999px;
+    background: #171321;
+    padding: 0 14px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .experience-choice-confirm button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .experience-choice-panel.is-compact {
+    grid-column: 2;
+    margin-top: 7px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  .experience-choice-panel.is-compact > p {
+    margin-bottom: 6px;
+    font-size: 8px;
+  }
+
+  .experience-choice-panel.is-compact .experience-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .experience-choice-panel.is-compact .experience-choice-grid > button {
+    min-height: 48px;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 7px;
+    border-radius: 12px;
+    padding: 7px 8px;
+  }
+
+  .experience-choice-panel.is-compact .experience-choice-grid b {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    font-size: 8px;
+  }
+
+  .experience-choice-panel.is-compact .experience-choice-grid button > span {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .experience-dossier-progress {
+    position: relative;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+    padding: 24px;
+  }
+
+  .experience-dossier-progress-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .experience-dossier-progress-title > div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .experience-dossier-progress-title strong {
+    color: #171321;
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .experience-dossier-progress-title span {
+    margin-top: 4px;
+    color: #aaa3b4;
+    font-size: 10px;
+    font-weight: 650;
+  }
+
+  .experience-dossier-progress-title b {
+    color: #725cff;
+    font-size: 20px;
+    font-weight: 900;
+  }
+
+  .experience-dossier-meter {
+    height: 6px;
+    margin-top: 13px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e5e1ea;
+  }
+
+  .experience-dossier-meter > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #725cff, #ff5cc8);
+    transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .experience-dossier-fields {
+    margin-top: 18px;
+  }
+
+  .experience-dossier-fields > div {
+    border-bottom: 1px solid rgba(23, 19, 33, 0.08);
+    padding: 13px 2px;
+  }
+
+  .experience-dossier-fields span {
+    color: #8a8296;
+    font-size: 10px;
+    font-weight: 850;
+  }
+
+  .experience-dossier-fields p {
+    margin-top: 4px;
+    color: #aaa3b4;
+    font-size: 12px;
+    line-height: 1.55;
+    font-weight: 650;
+  }
+
+  .experience-dossier-fields .is-confirmed p {
+    color: #383141;
+  }
+
+  .experience-dossier-fields .is-new {
+    animation: product-demo-highlight 1.2s ease both;
+  }
+
+  .experience-dossier-note {
+    position: absolute;
+    right: 20px;
+    bottom: 18px;
+    border-radius: 999px;
+    background: #b6ffdd;
+    padding: 7px 10px;
+    color: #16704a;
+    font-size: 9px;
+    font-weight: 900;
+    animation: product-demo-pop 360ms ease both;
+  }
+
+  .experience-dossier-progress.is-compact {
+    padding: 18px 20px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-progress-title strong {
+    font-size: 13px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-progress-title span {
+    font-size: 9px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-progress-title b {
+    font-size: 16px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-meter {
+    height: 5px;
+    margin-top: 10px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-fields {
+    margin-top: 13px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-fields > div {
+    padding: 9px 2px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-fields span {
+    font-size: 8px;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-fields p {
+    margin-top: 3px;
+    font-size: 9px;
+    line-height: 1.45;
+  }
+
+  .experience-dossier-progress.is-compact .experience-dossier-note {
+    right: 17px;
+    bottom: 12px;
+    padding: 6px 9px;
+    font-size: 8px;
+  }
+
+  .experience-guide-shared {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .experience-guide-shared .experience-dossier-progress {
+    flex: 1;
+    border: 1px solid rgba(23, 19, 33, 0.08);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .experience-guide-next {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 12px;
+    border-top: 1px solid rgba(23, 19, 33, 0.08);
+    padding: 14px 4px 0;
+  }
+
+  .experience-guide-next strong {
+    color: #171321;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .experience-guide-next p {
+    margin-top: 4px;
+    color: #756d82;
+    font-size: 10px;
+    line-height: 1.55;
+    font-weight: 650;
+  }
+
+  .experience-guide-next button {
+    margin-top: 9px;
+  }
+
+  @media (max-width: 1020px) {
+    .experience-workspace,
+    .experience-workspace.has-dossier {
+      height: auto;
+      grid-template-columns: 1fr;
+      overflow: visible;
+    }
+
+    .experience-workspace-chat {
+      min-height: 640px;
+      border-right: 0;
+      border-bottom: 1px solid rgba(23, 19, 33, 0.08);
+    }
+
+    .experience-workspace-dossier {
+      min-height: 520px;
+    }
+
+    .experience-workspace.is-compact {
+      height: 100%;
+      grid-template-columns: minmax(0, 1.18fr) minmax(310px, 0.82fr);
+      overflow: hidden;
+    }
+
+    .experience-workspace.is-compact .experience-workspace-chat {
+      min-height: 0;
+      border-right: 1px solid rgba(23, 19, 33, 0.08);
+      border-bottom: 0;
+    }
+
+    .experience-workspace.is-compact .experience-workspace-dossier {
+      min-height: 0;
+    }
+  }
+}
+
+@layer components {
   .home-dopamine {
     min-height: calc(100dvh - 64px);
     background:

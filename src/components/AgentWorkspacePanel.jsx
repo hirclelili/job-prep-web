@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { stripAgentToolBlocks } from '../agent/runtime'
 import { useAgent } from '../contexts/AgentContext'
+import { ExperienceChoiceCards } from './experience/ExperienceWorkspaceUI'
 
 const TOOL_LABELS = {
   'memory.read': '读取记忆',
@@ -406,48 +407,14 @@ function AgentWorkspaceMessage({ message, onChoiceSelect }) {
           )}
         </div>
         {choiceOptions.length > 0 && (
-          <div className="mt-3 rounded-2xl border border-[#171321]/10 bg-white/50 p-2">
-            <p className="mb-2 px-1 text-[11px] font-black text-[#8a8296]">
-              {isMultiple ? '可以多选，选好后确认；也可以补充真实情况' : '选择一个继续，也可以在下方自己补充'}
-            </p>
-            <div className="grid gap-2">
-            {choiceOptions.map(option => (
-              (() => {
-                const active = selected.some(item => item.label === option.label)
-                return (
-              <button
-                key={`${option.label}-${option.text}`}
-                onClick={() => isMultiple ? toggleSelected(option) : onChoiceSelect?.(option)}
-                disabled={loading}
-                className={`rounded-2xl border px-3 py-2 text-left text-xs font-bold leading-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#171321]/20 hover:bg-[#b6ffdd]/80 hover:shadow-[4px_4px_0_rgba(85,223,241,0.22)] disabled:cursor-not-allowed disabled:opacity-40 ${
-                  active
-                    ? 'border-[#171321]/30 bg-[#b6ffdd]/80 text-[#171321] shadow-[4px_4px_0_rgba(85,223,241,0.22)]'
-                    : 'border-[#171321]/10 bg-white/82 text-[#41394d]'
-                }`}
-              >
-                <span className={`mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black ${
-                  active ? 'bg-[#ff5cc8] text-white' : 'bg-[#171321] text-white'
-                }`}>
-                  {active ? '✓' : option.label}
-                </span>
-                {option.text}
-              </button>
-                )
-              })()
-            ))}
-            </div>
-            {isMultiple && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={submitSelected}
-                  disabled={selected.length === 0 || loading}
-                  className="prep-primary disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  确认选择
-                </button>
-              </div>
-            )}
-          </div>
+          <ExperienceChoiceCards
+            options={choiceOptions}
+            selected={selected}
+            multiple={isMultiple}
+            disabled={loading}
+            onSelect={option => isMultiple ? toggleSelected(option) : onChoiceSelect?.(option)}
+            onConfirm={submitSelected}
+          />
         )}
       </div>
     </div>

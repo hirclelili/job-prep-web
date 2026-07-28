@@ -1,4 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import {
+  ExperienceChoiceCards,
+  ExperienceDossierProgress,
+  ExperienceResearchWorkspace,
+} from './experience/ExperienceWorkspaceUI'
 
 const timeline = [
   1300, // asset row
@@ -69,53 +74,45 @@ function DemoAssetLibrary({ step, onStart }) {
 function DemoDossierStatus({ answered }) {
   const progress = answered ? 46 : 28
   return (
-    <div className="product-demo-dossier-status">
-      <div className="product-demo-dossier-title">
-        <div>
-          <strong>经历档案</strong>
-          <span>确认的信息会实时沉淀到这里</span>
-        </div>
-        <b>{progress}%</b>
-      </div>
-      <div className="product-demo-meter"><span style={{ width: `${progress}%` }} /></div>
-      <div className="product-demo-dossier-lines">
-        <div className="is-confirmed">
-          <span>基础信息</span>
-          <p>跨境卖家自助入驻流程 · 产品实习生</p>
-        </div>
-        <div className={answered ? 'is-confirmed is-new' : ''}>
-          <span>业务问题</span>
-          <p>{answered ? '审核状态不透明，卖家频繁咨询，运营依赖线下同步。' : '待补充'}</p>
-        </div>
-        <div>
-          <span>个人判断</span>
-          <p>待补充</p>
-        </div>
-        <div>
-          <span>结果证据</span>
-          <p>待补充</p>
-        </div>
-      </div>
-      {answered && <div className="product-demo-saved-note">已记录到业务背景</div>}
-    </div>
+    <ExperienceDossierProgress
+      compact
+      progress={progress}
+      fields={[
+        {
+          label: '基础信息',
+          value: '跨境卖家自助入驻流程 · 产品实习生',
+          confirmed: true,
+        },
+        {
+          label: '业务问题',
+          value: answered ? '审核状态不透明，卖家频繁咨询，运营依赖线下同步。' : '待补充',
+          confirmed: answered,
+          highlight: answered,
+        },
+        { label: '个人判断', value: '待补充' },
+        { label: '结果证据', value: '待补充' },
+      ]}
+      note={answered ? '已记录到业务背景' : ''}
+    />
   )
 }
 
 function DemoResearch({ step, onSelect, onGenerate }) {
   const answered = step >= 5
   const isLoading = step === 2
+  const options = [
+    { label: 'A', text: '审核状态不透明，卖家频繁咨询，运营依赖线下同步' },
+    { label: 'B', text: '不同市场的入驻流程不统一，产品维护成本较高' },
+    { label: 'C', text: '申请信息分散在多张表格中，审核容易遗漏' },
+    { label: 'D', text: '其他，我自己补充' },
+  ]
   return (
     <div className="product-demo-screen product-demo-research-screen">
-      <div className="product-demo-research-head">
-        <div>
-          <span>我的经历</span>
-          <strong>经历调研</strong>
-          <p>AI 给选项，你确认和补充，最后沉淀经历档案</p>
-        </div>
-        <span className="product-demo-sample-tag">示例数据</span>
-      </div>
-      <div className="product-demo-research-body">
-        <div className="product-demo-chat">
+      <ExperienceResearchWorkspace
+        compact
+        action={<span className="product-demo-sample-tag">示例数据</span>}
+        chat={(
+          <div className="product-demo-chat">
           <div className="product-demo-user-message">
             <span>你</span>
             <p>负责卖家自助入驻流程优化，完成申请记录页和详情页设计。</p>
@@ -131,25 +128,12 @@ function DemoResearch({ step, onSelect, onGenerate }) {
               <p className="product-demo-question-copy">
                 当时推动入驻流程优化，最主要的问题是什么？
               </p>
-              <small>选择一个继续，也可以补充真实情况</small>
-              <div className="product-demo-options">
-                {[
-                  ['A', '审核状态不透明，卖家频繁咨询，运营依赖线下同步'],
-                  ['B', '不同市场的入驻流程不统一，产品维护成本较高'],
-                  ['C', '申请信息分散在多张表格中，审核容易遗漏'],
-                  ['D', '其他，我自己补充'],
-                ].map(([label, text]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className={answered && label === 'A' ? 'is-selected' : ''}
-                    onClick={() => label === 'A' && onSelect()}
-                  >
-                    <b>{answered && label === 'A' ? '✓' : label}</b>
-                    <span>{text}</span>
-                  </button>
-                ))}
-              </div>
+              <ExperienceChoiceCards
+                compact
+                options={options}
+                selected={answered ? [options[0]] : []}
+                onSelect={option => option.label === 'A' && onSelect()}
+              />
               {answered && (
                 <button
                   type="button"
@@ -161,9 +145,10 @@ function DemoResearch({ step, onSelect, onGenerate }) {
               )}
             </div>
           )}
-        </div>
-        <DemoDossierStatus answered={answered} />
-      </div>
+          </div>
+        )}
+        dossier={<DemoDossierStatus answered={answered} />}
+      />
     </div>
   )
 }

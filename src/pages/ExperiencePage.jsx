@@ -2,6 +2,10 @@ import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AgentWorkspacePanel from '../components/AgentWorkspacePanel'
 import OutputPanel from '../components/OutputPanel'
+import {
+  ExperienceDossierProgress,
+  ExperienceResearchWorkspace,
+} from '../components/experience/ExperienceWorkspaceUI'
 import { subscribeAgentArtifacts } from '../agent/events'
 import { getAgentThread } from '../agent/memory'
 import { runTextSkill } from '../skills/core'
@@ -265,65 +269,32 @@ function buildFallbackExp(text, base = {}) {
 }
 
 function ExperienceGuidePanel({ archiveStatus, onOpenLibrary }) {
-  const statusText = archiveStatus === 'saved_to_library'
-    ? '已保存'
-    : archiveStatus === 'draft_not_saved'
-      ? '草稿未保存'
-      : archiveStatus === 'in_progress_not_saved'
-        ? '调研中'
-        : '等待调研'
+  const inProgress = archiveStatus === 'in_progress_not_saved'
+  const progress = inProgress ? 28 : 0
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
-      <div className="prep-panel flex-1 p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="prep-kicker">调研状态</p>
-            <h2 className="prep-title mt-1 text-2xl">先把这段经历问清楚</h2>
-          </div>
-          <span className={`prep-chip ${
-            archiveStatus === 'saved_to_library'
-              ? 'prep-chip-hit'
-              : archiveStatus === 'draft_not_saved'
-                ? 'prep-chip-warn'
-                : 'prep-chip-soft'
-          }`}>
-            {statusText}
-          </span>
-        </div>
-
-        <div className="mt-6 rounded-[24px] bg-[#171321] p-4 text-white shadow-[7px_7px_0_rgba(255,92,200,0.18)]">
-          <p className="text-xs font-black text-white/50">当前要做</p>
-          <p className="mt-2 text-sm font-bold leading-7">
-            {archiveStatus === 'in_progress_not_saved'
-              ? '继续回答左侧的问题。AI 会沿着已有讨论往下问，不会因为聊过这段经历就直接生成档案。'
-              : '在左侧贴一段经历，或者从经历资产里点“深度整理”。AI 会一轮只问一个关键问题，并给可点击选项。'}
-          </p>
-        </div>
-
-        <div className="mt-5 grid gap-3">
-          {[
-            ['主线定位', '这段经历到底主打产品、策略、数据、协同还是业务结果。'],
-            ['贡献边界', '哪些是你主导，哪些是参与，哪些是团队协作。'],
-            ['证据补全', '补齐指标、产出物、影响范围，没有数字也能找替代证据。'],
-            ['表达沉淀', '最后生成可用于简历和面试的完整经历档案。'],
-          ].map(([title, desc]) => (
-            <div key={title} className="rounded-[22px] border border-[#171321]/10 bg-white/70 px-4 py-3">
-              <p className="text-sm font-black text-[#171321]">{title}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-[#8a8296]">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="prep-panel-tight p-4">
-        <p className="text-sm font-black text-[#171321]">保存规则</p>
-        <p className="mt-2 text-xs font-semibold leading-6 text-[#6f667d]">
-          只有右侧生成完整档案，并点击“保存为经历资产”后，才算真正进入经历资产库。对话记录本身不算归档。
+    <div className="experience-guide-shared">
+      <ExperienceDossierProgress
+        progress={progress}
+        fields={[
+          {
+            label: '基础信息',
+            value: inProgress ? '已读取当前经历' : '等待开始',
+            confirmed: inProgress,
+          },
+          { label: '业务问题', value: '待确认' },
+          { label: '个人判断与行动', value: '待确认' },
+          { label: '结果证据', value: '待补充' },
+        ]}
+      />
+      <div className="experience-guide-next">
+        <strong>{inProgress ? '继续回答左侧问题' : '先从左侧描述一段经历'}</strong>
+        <p>
+          {inProgress
+            ? 'AI 会接着已有讨论追问，只有生成并保存完整档案后才算归档。'
+            : 'AI 每轮只追问一个关键问题，并提供可点击选项。'}
         </p>
-        <button onClick={onOpenLibrary} className="prep-ghost mt-4 w-full">
-          查看经历资产
-        </button>
+        <button onClick={onOpenLibrary} className="prep-ghost">查看经历资产</button>
       </div>
     </div>
   )
@@ -590,17 +561,10 @@ export default function ExperiencePage() {
   const hasDossier = Boolean(outputText)
 
   return (
-    <div className="prep-bg mx-auto flex h-[calc(100vh-64px)] w-full max-w-[1180px] overflow-hidden max-lg:h-auto max-lg:flex-col max-lg:overflow-auto">
-      {/* Left: Chat */}
-      <div className={`flex flex-col border-r border-white/70 bg-white/50 backdrop-blur-xl max-lg:w-full max-lg:border-b max-lg:border-r-0 ${
-        hasDossier ? 'w-[430px] shrink-0' : 'min-w-0 flex-1'
-      }`}>
-        <div className="flex items-start justify-between gap-3 border-b border-white/70 px-5 py-4">
-          <div>
-            <p className="prep-kicker">我的经历</p>
-            <h2 className={`prep-title mt-1 ${hasDossier ? 'text-xl' : 'text-2xl'}`}>经历调研</h2>
-            <p className="mt-1 text-xs font-semibold leading-5 text-[#8a8296]">AI 给选项，你确认和补充，最后沉淀经历档案</p>
-          </div>
+    <>
+      <ExperienceResearchWorkspace
+        hasDossier={hasDossier}
+        action={(
           <div className="flex shrink-0 flex-col gap-2">
             <button
               onClick={handleNew}
@@ -609,8 +573,8 @@ export default function ExperiencePage() {
               新调研
             </button>
           </div>
-        </div>
-        <div className="min-h-0 flex-1 overflow-hidden">
+        )}
+        chat={(
           <AgentWorkspacePanel
             context={agentContext}
             autoSendMessage={autoPrefillMessage}
@@ -619,14 +583,8 @@ export default function ExperiencePage() {
             emptyText="它会把这段经历问透，确认生成模式后，再产出经历档案底稿、简历版、完整故事和面试工具包。"
             placeholder="描述经历，或回答助手的问题…"
           />
-        </div>
-      </div>
-
-      {/* Right: Output */}
-      <div className={`flex min-w-0 flex-col overflow-hidden bg-white/68 backdrop-blur max-lg:min-h-[520px] ${
-        hasDossier ? 'flex-1' : 'w-[390px] shrink-0 max-lg:w-full'
-      }`}>
-        {!hasDossier ? (
+        )}
+        dossier={!hasDossier ? (
           <ExperienceGuidePanel
             archiveStatus={archiveStatus}
             onOpenLibrary={() => navigate('/library')}
@@ -680,7 +638,7 @@ export default function ExperiencePage() {
             </div>
           </>
         )}
-      </div>
+      />
       {rewriteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="prep-panel mx-4 flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden">
@@ -758,6 +716,6 @@ export default function ExperiencePage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
