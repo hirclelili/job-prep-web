@@ -693,6 +693,16 @@
     border-bottom: 1px solid rgba(23, 19, 33, 0.08);
   }
 
+  .home-workspace + .home-demo {
+    margin-top: 18px;
+  }
+
+  .home-workspace-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
   .home-workspace-counts {
     display: flex;
     gap: 8px;
@@ -705,6 +715,23 @@
     color: #756d82;
     font-size: 11px;
     font-weight: 800;
+  }
+
+  .home-demo-toggle {
+    min-height: 34px;
+    border: 1px solid rgba(23, 19, 33, 0.12);
+    border-radius: 999px;
+    background: #ffffff;
+    padding: 0 12px;
+    color: #4d4557;
+    font-size: 11px;
+    font-weight: 850;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+
+  .home-demo-toggle:hover {
+    border-color: rgba(114, 92, 255, 0.36);
+    background: #f4f1ff;
   }
 
   .home-workspace-list {
@@ -856,6 +883,12 @@
     .home-demo-tabs {
       width: 100%;
       min-width: 0;
+    }
+
+    .home-workspace-tools {
+      width: 100%;
+      align-items: flex-start;
+      justify-content: space-between;
     }
 
     .home-demo-raw,

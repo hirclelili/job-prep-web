@@ -221,7 +221,16 @@ function ExperienceReuseDemo() {
   )
 }
 
-function ContinueWorkspace({ experiences, resumes, jobs, resumeDraft, importDraft, navigate }) {
+function ContinueWorkspace({
+  experiences,
+  resumes,
+  jobs,
+  resumeDraft,
+  importDraft,
+  navigate,
+  showDemo,
+  onToggleDemo,
+}) {
   const items = useMemo(() => {
     const result = []
     const used = new Set()
@@ -328,10 +337,15 @@ function ContinueWorkspace({ experiences, resumes, jobs, resumeDraft, importDraf
         <div>
           <h2>继续处理</h2>
         </div>
-        <div className="home-workspace-counts">
-          <span>{experiences.length} 段经历</span>
-          <span>{resumes.length} 份简历</span>
-          <span>{jobs.length} 个岗位</span>
+        <div className="home-workspace-tools">
+          <div className="home-workspace-counts">
+            <span>{experiences.length} 段经历</span>
+            <span>{resumes.length} 份简历</span>
+            <span>{jobs.length} 个岗位</span>
+          </div>
+          <button type="button" className="home-demo-toggle" onClick={onToggleDemo}>
+            {showDemo ? '收起功能演示' : '查看功能演示'}
+          </button>
         </div>
       </div>
       <div className="home-workspace-list">
@@ -354,6 +368,7 @@ function ContinueWorkspace({ experiences, resumes, jobs, resumeDraft, importDraf
 export default function Home() {
   const navigate = useNavigate()
   const { isConfigured, setShowSettings, experiences } = useApp()
+  const [showReturningUserDemo, setShowReturningUserDemo] = useState(false)
   const resumes = getResumes()
   const jobs = getJobs()
   const resumeDraft = readDraft(DRAFT_KEYS.resume)
@@ -402,10 +417,14 @@ export default function Home() {
             resumeDraft={resumeDraft}
             importDraft={importDraft}
             navigate={navigate}
+            showDemo={showReturningUserDemo}
+            onToggleDemo={() => setShowReturningUserDemo(current => !current)}
           />
         ) : (
           <ExperienceReuseDemo />
         )}
+
+        {hasWorkspace && showReturningUserDemo && <ExperienceReuseDemo />}
 
         <p className="home-note">
           数据保存在当前浏览器本地。清理浏览器数据、更换设备或使用隐身模式时可能消失，重要内容建议导出或复制到自己的文档。
