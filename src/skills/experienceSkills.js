@@ -66,6 +66,9 @@ export const experienceDeepDiveSkill = defineTextSkill({
     input.archiveStatusExplanation || '聊天记录不代表已经生成完整经历档案，也不代表已经保存归档。',
     `是否已有对话调研进度：${input.hasChatProgress || 'no'}`,
     '硬规则：判断是否完成或归档时，只能看本段状态说明，不要根据聊天历史推断。',
+    input.confirmedResearchSummary
+      ? `\n【右侧已实时记录的确认信息】\n${input.confirmedResearchSummary}\n这些内容来自本条经历的问答记录，可用于判断下一轮缺口；如与用户最新表达冲突，以最新表达为准。`
+      : '',
     input.currentDossierPreview ? `\n【右侧经历档案草稿摘要】\n${input.currentDossierPreview}` : '',
     '',
     '【用户本轮输入】',

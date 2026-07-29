@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AgentWorkspacePanel from '../components/AgentWorkspacePanel'
 import OutputPanel from '../components/OutputPanel'
@@ -14,6 +14,7 @@ import { saveExperience } from '../utils/storage'
 import { useApp } from '../contexts/AppContext'
 import { useAgent } from '../contexts/AgentContext'
 import { clearDraft, DRAFT_KEYS, formatDraftTime, readDraft, writeDraft } from '../utils/draftStorage'
+import { buildExperienceResearchProgress } from '../utils/experienceResearchProgress'
 
 const OUTPUT_STORAGE_KEY = 'job_prep_exp_output'
 const ASSET_STORAGE_KEY = 'job_prep_exp_asset'
@@ -268,24 +269,15 @@ function buildFallbackExp(text, base = {}) {
   }
 }
 
-function ExperienceGuidePanel({ archiveStatus, onOpenLibrary }) {
+function ExperienceGuidePanel({ archiveStatus, onOpenLibrary, researchProgress }) {
   const inProgress = archiveStatus === 'in_progress_not_saved'
-  const progress = inProgress ? 28 : 0
 
   return (
     <div className="experience-guide-shared">
       <ExperienceDossierProgress
-        progress={progress}
-        fields={[
-          {
-            label: '基础信息',
-            value: inProgress ? '已读取当前经历' : '等待开始',
-            confirmed: inProgress,
-          },
-          { label: '业务问题', value: '待确认' },
-          { label: '个人判断与行动', value: '待确认' },
-          { label: '结果证据', value: '待补充' },
-        ]}
+        progress={researchProgress.progress}
+        fields={researchProgress.fields}
+        note={researchProgress.latestField ? '刚刚确认的内容已记录' : ''}
       />
       <div className="experience-guide-next">
         <strong>{inProgress ? '继续回答左侧问题' : '先从左侧描述一段经历'}</strong>
@@ -515,6 +507,15 @@ export default function ExperiencePage() {
         ? 'in_progress_not_saved'
         : 'no_dossier'
 
+  const researchProgress = useMemo(
+    () => buildExperienceResearchProgress(
+      currentThreadId === experienceThreadId ? messages : getAgentThread(experienceThreadId),
+      sourceExperience,
+      { complete: Boolean(outputText) },
+    ),
+    [currentThreadId, experienceThreadId, messages, outputText, sourceExperience],
+  )
+
   const agentContext = {
     stage: '经历调研',
     agentThreadId: experienceThreadId,
@@ -526,6 +527,7 @@ export default function ExperiencePage() {
     pageInstruction: '用户在经历调研页。若用户描述一段经历或回答追问，优先调用 skill.chat_turn 的 experience.deep_dive.chat。skill 返回本轮问题和选项时，最终回复必须保留“## 本轮问题 / 为什么问 / 选项 / 补充提示”的结构和 A/B/C/D 选项文字，方便页面渲染可点击选项。如果输出已经是完整经历档案，发布为 experience.output。',
     currentOutputStatus: archiveStatus,
     hasChatProgress: hasExperienceChatProgress ? 'yes' : 'no',
+    confirmedResearchSummary: researchProgress.summary,
     currentDossierPreview: outputText ? outputText.slice(0, 1800) : '',
     archiveStatusExplanation: archiveStatus === 'saved_to_library'
       ? '右侧完整经历档案已经保存到经历资产库。可以说已保存。'
@@ -605,6 +607,7 @@ export default function ExperiencePage() {
         dossier={!hasDossier ? (
           <ExperienceGuidePanel
             archiveStatus={archiveStatus}
+            researchProgress={researchProgress}
             onOpenLibrary={() => navigate('/library')}
           />
         ) : (
