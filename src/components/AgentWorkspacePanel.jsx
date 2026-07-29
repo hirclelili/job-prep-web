@@ -49,6 +49,74 @@ function cleanAssistantDisplay(text = '') {
     .trim()
 }
 
+function parseExperienceGenerationStatus(text = '') {
+  if (!String(text).includes('正在生成完整经历档案')) return null
+  const stepMatch = String(text).match(/\*\*(\d+)\/(\d+|…)\s*·\s*([^*]+)\*\*/)
+  if (!stepMatch) return null
+  const step = Number(stepMatch[1])
+  const parsedTotal = Number(stepMatch[2])
+  const total = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : null
+  const completedText = String(text).match(/已完成：([^\n]+)/)?.[1] || ''
+  return {
+    step,
+    total,
+    current: stepMatch[3].trim(),
+    completed: completedText
+      .split('、')
+      .map(item => item.trim())
+      .filter(Boolean),
+    progress: total ? Math.min(100, Math.round((step / total) * 100)) : 8,
+  }
+}
+
+function ExperienceGenerationProgress({ status }) {
+  const segmentCount = status.total || 6
+  return (
+    <div className="experience-generation-card" role="status" aria-live="polite">
+      <div className="experience-generation-head">
+        <span className="experience-generation-spinner" aria-hidden="true" />
+        <div>
+          <span className="experience-generation-eyebrow">正在生成经历档案</span>
+          <strong key={`${status.step}-${status.current}`}>{status.current}</strong>
+        </div>
+        <b>{status.total ? `${status.step}/${status.total}` : '准备中'}</b>
+      </div>
+
+      <div className="experience-generation-track" aria-hidden="true">
+        <span style={{ width: `${status.progress}%` }} />
+      </div>
+
+      <div
+        className="experience-generation-segments"
+        style={{ gridTemplateColumns: `repeat(${segmentCount}, minmax(0, 1fr))` }}
+        aria-hidden="true"
+      >
+        {Array.from({ length: segmentCount }, (_, index) => {
+          const segmentStep = index + 1
+          const state = segmentStep < status.step
+            ? 'is-complete'
+            : segmentStep === status.step ? 'is-current' : ''
+          return <i key={segmentStep} className={state} />
+        })}
+      </div>
+
+      <div className="experience-generation-foot">
+        <div className="experience-generation-done">
+          {status.completed.length > 0 ? status.completed.map(item => (
+            <span key={item}>{item}</span>
+          )) : <span className="is-preparing">正在整理调研内容</span>}
+        </div>
+        <div className="experience-generation-live">
+          <i />
+          <i />
+          <i />
+          <span>处理中</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function parseChoiceLine(line = '') {
   const cleaned = line
     .trim()
@@ -165,6 +233,7 @@ export default function AgentWorkspacePanel({
   const visibleLoading = demoState?.loading ?? loading
   const visibleToolEvents = demoState?.toolEvents ?? toolEvents
   const visiblePendingApproval = demoState?.pendingApproval ?? pendingApproval
+  const experienceGeneration = parseExperienceGenerationStatus(visibleStreamingText)
   const [input, setInput] = useState('')
   const [customChoice, setCustomChoice] = useState(null)
   const bottomRef = useRef(null)
@@ -303,15 +372,19 @@ export default function AgentWorkspacePanel({
         )}
 
         {visibleLoading && (
-          <div className="mt-4 rounded-2xl border border-[#55dff1]/40 bg-[#dffbff]/70 px-3 py-2 text-sm leading-6 text-[#41394d]">
-            {visibleStreamingText ? (
+          experienceGeneration ? (
+            <ExperienceGenerationProgress status={experienceGeneration} />
+          ) : (
+            <div className="mt-4 rounded-2xl border border-[#55dff1]/40 bg-[#dffbff]/70 px-3 py-2 text-sm leading-6 text-[#41394d]">
+              {visibleStreamingText ? (
               <div className="prose">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanAssistantDisplay(visibleStreamingText)}</ReactMarkdown>
               </div>
-            ) : (
-              <span className="text-xs font-semibold text-[#8a8296]">正在读取当前状态…</span>
-            )}
-          </div>
+              ) : (
+                <span className="text-xs font-semibold text-[#8a8296]">正在读取当前状态…</span>
+              )}
+            </div>
+          )
         )}
         <div ref={bottomRef} />
       </div>
