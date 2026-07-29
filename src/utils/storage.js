@@ -212,6 +212,10 @@ export function getExperiences() {
   }
 }
 
+export function getExperience(id) {
+  return getExperiences().find(item => item.id === id) || null
+}
+
 /**
  * Save or update an experience.
  * If exp.id exists and matches an entry, that entry is updated (merge).

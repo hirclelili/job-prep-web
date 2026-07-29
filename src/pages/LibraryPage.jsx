@@ -78,7 +78,7 @@ function getExperienceDisplayTitle(exp) {
   return title
 }
 
-function ExperienceCard({ exp, onDelete, onDeepProcess, onTypeChange }) {
+function ExperienceCard({ exp, onDelete, onDeepProcess, onTypeChange, onOpen }) {
   const [expanded, setExpanded] = useState(false)
   const isImported = exp.status === 'imported'
   const bullets = exp.resume_bullets || []
@@ -121,12 +121,22 @@ function ExperienceCard({ exp, onDelete, onDeepProcess, onTypeChange }) {
               深度整理
             </button>
           )}
-          <button
-            onClick={() => setExpanded(e => !e)}
-            className="library-action-secondary"
-          >
-            {expanded ? '收起' : '展开'}
-          </button>
+          {!isImported && (
+            <button
+              onClick={() => onOpen(exp)}
+              className="library-action-primary"
+            >
+              查看档案
+            </button>
+          )}
+          {isImported && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              className="library-action-secondary"
+            >
+              {expanded ? '收起原始内容' : '查看原始内容'}
+            </button>
+          )}
           <button
             onClick={() => onDelete(exp.id)}
             className="library-action-danger"
@@ -385,6 +395,7 @@ export default function LibraryPage() {
             onDelete={handleDelete}
             onDeepProcess={handleDeepProcess}
             onTypeChange={handleTypeChange}
+            onOpen={exp => navigate(`/library/${exp.id}`)}
           />
         ))}
         {visibleExperiences.length === 0 && (

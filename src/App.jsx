@@ -10,6 +10,7 @@ const Home = lazy(() => import('./pages/Home'))
 const ImportPage = lazy(() => import('./pages/ImportPage'))
 const ExperiencePage = lazy(() => import('./pages/ExperiencePage'))
 const LibraryPage = lazy(() => import('./pages/LibraryPage'))
+const ExperienceDetailPage = lazy(() => import('./pages/ExperienceDetailPage'))
 const DirectionPage = lazy(() => import('./pages/DirectionPage'))
 const ResumePage = lazy(() => import('./pages/ResumePage'))
 const JobLibraryPage = lazy(() => import('./pages/JobLibraryPage'))
@@ -39,6 +40,7 @@ function AppInner() {
             <Route path="/import" element={<ImportPage />} />
             <Route path="/experience" element={<ExperiencePage />} />
             <Route path="/library" element={<LibraryPage />} />
+            <Route path="/library/:id" element={<ExperienceDetailPage />} />
             <Route path="/directions" element={<DirectionPage />} />
             <Route path="/resumes" element={<ResumePage />} />
             <Route path="/jobs" element={<JobLibraryPage />} />

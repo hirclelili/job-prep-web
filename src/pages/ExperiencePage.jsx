@@ -7,7 +7,7 @@ import {
   ExperienceResearchWorkspace,
 } from '../components/experience/ExperienceWorkspaceUI'
 import { subscribeAgentArtifacts } from '../agent/events'
-import { getAgentThread } from '../agent/memory'
+import { getAgentThread, saveAgentThread } from '../agent/memory'
 import { runTextSkill } from '../skills/core'
 import { experienceSectionRewriteSkill } from '../skills/experienceSkills'
 import { saveExperience } from '../utils/storage'
@@ -308,6 +308,7 @@ export default function ExperiencePage() {
 
   const prefillText = location.state?.prefillText || null
   const existingId  = location.state?.existingId  || null
+  const continueResearch = Boolean(location.state?.continueResearch)
   const [manualScopeId, setManualScopeId] = useState(() => {
     try {
       const current = localStorage.getItem(CURRENT_MANUAL_SCOPE_KEY)
@@ -330,16 +331,17 @@ export default function ExperiencePage() {
 
   // Restore output from localStorage so it survives navigation
   const [outputText, setOutputText] = useState(() => {
-    return readExperienceDraft(storageKeys).output
+    return readExperienceDraft(storageKeys).output || sourceExperience?.dossier_markdown || ''
   })
   const [parsedExp, setParsedExp] = useState(() => {
-    return readExperienceDraft(storageKeys).asset
+    return readExperienceDraft(storageKeys).asset || sourceExperience
   })
   const [hasOutput, setHasOutput] = useState(() => {
-    return !!readExperienceDraft(storageKeys).output
+    return Boolean(readExperienceDraft(storageKeys).output || sourceExperience?.dossier_markdown)
   })
   const [saved, setSaved] = useState(() => {
-    return readExperienceDraft(storageKeys).saved
+    const draft = readExperienceDraft(storageKeys)
+    return draft.output ? draft.saved : Boolean(sourceExperience && sourceExperience.status !== 'imported')
   })
   const [autoPrefillMessage, setAutoPrefillMessage] = useState('')
   const [rewriteTarget, setRewriteTarget] = useState(() => initialRewriteDraft?.data?.target || null)
@@ -354,15 +356,20 @@ export default function ExperiencePage() {
 
   useEffect(() => {
     const draft = readExperienceDraft(storageKeys)
-    setOutputText(draft.output)
-    setParsedExp(draft.asset)
-    setHasOutput(!!draft.output)
-    setSaved(draft.saved)
+    const persistedOutput = draft.output || sourceExperience?.dossier_markdown || ''
+    setOutputText(persistedOutput)
+    setParsedExp(draft.asset || sourceExperience)
+    setHasOutput(Boolean(persistedOutput))
+    setSaved(draft.output ? draft.saved : Boolean(sourceExperience && sourceExperience.status !== 'imported'))
 
     const existingMessages = getAgentThread(experienceThreadId)
     restoreAgentThread(existingMessages, experienceThreadId)
-    setAutoPrefillMessage(prefillText && existingMessages.length === 0 && !draft.output ? prefillText : '')
-  }, [experienceThreadId, prefillText, restoreAgentThread, storageKeys.asset, storageKeys.output, storageKeys.saved])
+    setAutoPrefillMessage(
+      prefillText && (continueResearch || (existingMessages.length === 0 && !draft.output))
+        ? prefillText
+        : '',
+    )
+  }, [continueResearch, experienceThreadId, prefillText, restoreAgentThread, sourceExperience, storageKeys.asset, storageKeys.output, storageKeys.saved])
 
   useEffect(() => {
     if (rewriteScopeRef.current === rewriteDraftKey) return
@@ -532,12 +539,15 @@ export default function ExperiencePage() {
   const handleSave = () => {
     if (!parsedExp) return
     const toSave = existingId
-      ? { ...parsedExp, id: existingId, status: 'optimized' }
-      : { ...parsedExp, status: 'optimized' }
-    saveExperience(toSave)
+      ? { ...parsedExp, id: existingId, status: 'optimized', dossier_markdown: outputText }
+      : { ...parsedExp, status: 'optimized', dossier_markdown: outputText }
+    const savedExperience = saveExperience(toSave)
+    const savedThreadId = `experience:${safeScopeId(savedExperience.id)}`
+    saveAgentThread(messages, savedThreadId)
     refreshExperiences()
     setSaved(true)
     localStorage.setItem(storageKeys.saved, 'true')
+    navigate(`/library/${savedExperience.id}`, { replace: true })
   }
 
   const handleNew = () => {

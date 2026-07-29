@@ -2844,6 +2844,253 @@
   }
 }
 
+@layer components {
+  .experience-detail-page {
+    min-height: calc(100vh - 64px);
+    padding-bottom: 56px;
+  }
+
+  .experience-detail-toolbar {
+    position: sticky;
+    top: 64px;
+    z-index: 20;
+    display: grid;
+    min-height: 76px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    border-bottom: 1px solid rgba(23, 19, 33, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    padding: 12px max(24px, calc((100vw - 1180px) / 2));
+    backdrop-filter: blur(18px);
+  }
+
+  .experience-detail-toolbar-copy {
+    min-width: 0;
+  }
+
+  .experience-detail-toolbar-copy span {
+    display: block;
+    color: #ff3eae;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .experience-detail-toolbar-copy strong {
+    display: block;
+    margin-top: 3px;
+    overflow: hidden;
+    color: #171321;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .experience-detail-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .experience-detail-layout {
+    display: grid;
+    max-width: 1180px;
+    grid-template-columns: minmax(0, 1fr) 230px;
+    align-items: start;
+    gap: 22px;
+    margin: 0 auto;
+    padding: 28px 24px 0;
+  }
+
+  .experience-detail-document {
+    min-width: 0;
+    border: 1px solid rgba(23, 19, 33, 0.08);
+    background: #ffffff;
+    padding: 48px 58px 60px;
+    box-shadow: 0 20px 60px rgba(62, 48, 86, 0.08);
+  }
+
+  .experience-detail-prose {
+    color: #332c3d;
+    font-size: 14px;
+    line-height: 1.85;
+  }
+
+  .experience-detail-prose h1 {
+    margin: 0 0 30px;
+    color: #171321;
+    font-size: 30px;
+    line-height: 1.25;
+    font-weight: 900;
+  }
+
+  .experience-detail-prose h2 {
+    margin: 34px 0 16px;
+    border-bottom: 2px solid #171321;
+    padding-bottom: 8px;
+    color: #171321;
+    font-size: 20px;
+    font-weight: 900;
+  }
+
+  .experience-detail-prose h3 {
+    margin: 26px 0 12px;
+    color: #171321;
+    font-size: 17px;
+    font-weight: 900;
+  }
+
+  .experience-detail-prose h4 {
+    margin: 20px 0 8px;
+    color: #554c62;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .experience-detail-prose p {
+    margin: 8px 0;
+  }
+
+  .experience-detail-prose ul,
+  .experience-detail-prose ol {
+    display: grid;
+    gap: 6px;
+    margin: 10px 0;
+    padding-left: 24px;
+  }
+
+  .experience-detail-prose ul {
+    list-style: disc;
+  }
+
+  .experience-detail-prose ol {
+    list-style: decimal;
+  }
+
+  .experience-detail-prose blockquote {
+    margin: 14px 0 22px;
+    border-left: 4px solid #ff5cc8;
+    background: #fff5fb;
+    padding: 10px 14px;
+    color: #62596e;
+  }
+
+  .experience-detail-aside {
+    position: sticky;
+    top: 160px;
+    display: grid;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid rgba(23, 19, 33, 0.08);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 18px 50px rgba(62, 48, 86, 0.07);
+  }
+
+  .experience-detail-aside > div,
+  .experience-detail-aside > label {
+    display: block;
+    border-bottom: 1px solid rgba(23, 19, 33, 0.07);
+    padding: 15px 16px;
+  }
+
+  .experience-detail-aside span {
+    display: block;
+    color: #8a8296;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .experience-detail-aside strong {
+    display: block;
+    margin-top: 4px;
+    color: #171321;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 900;
+  }
+
+  .experience-detail-aside select {
+    width: 100%;
+    margin-top: 7px;
+    border: 1px solid rgba(23, 19, 33, 0.10);
+    background: #ffffff;
+    padding: 8px 9px;
+    color: #171321;
+    font-size: 12px;
+    font-weight: 800;
+    outline: none;
+  }
+
+  .experience-detail-aside > p {
+    margin: 0;
+    padding: 15px 16px;
+    color: #766d82;
+    font-size: 11px;
+    line-height: 1.65;
+    font-weight: 650;
+  }
+
+  .experience-export-menu {
+    position: relative;
+  }
+
+  .experience-export-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 30;
+    width: 150px;
+    overflow: hidden;
+    border: 1px solid rgba(23, 19, 33, 0.10);
+    background: #ffffff;
+    padding: 6px;
+    box-shadow: 0 18px 45px rgba(23, 19, 33, 0.16);
+  }
+
+  .experience-export-popover button {
+    width: 100%;
+    padding: 9px 10px;
+    color: #41394d;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .experience-export-popover button:hover {
+    background: #f4f1f7;
+  }
+
+  .experience-detail-aside .experience-export-error {
+    color: #d63c5a;
+  }
+
+  @media (max-width: 900px) {
+    .experience-detail-toolbar {
+      position: static;
+      grid-template-columns: 1fr;
+      padding: 14px 18px;
+    }
+
+    .experience-detail-toolbar-actions {
+      flex-wrap: wrap;
+    }
+
+    .experience-detail-layout {
+      grid-template-columns: 1fr;
+      padding: 18px;
+    }
+
+    .experience-detail-document {
+      padding: 30px 24px 40px;
+    }
+
+    .experience-detail-aside {
+      position: static;
+    }
+  }
+}
+
 .agent-fab {
   position: fixed;
   right: 22px;
