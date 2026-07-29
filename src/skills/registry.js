@@ -3,8 +3,10 @@ import { battlePlanChatSkill, knowledgeAppendSkill, knowledgeSystemSkill, sectio
 import { directionAnalysisSkill } from './directionSkills'
 import {
   experienceDeepDiveSkill,
-  experienceDossierGenerateSkill,
   experienceEvidenceSynthesisSkill,
+  experienceOverviewGenerateSkill,
+  experienceProjectDossierGenerateSkill,
+  experienceProjectStoryGenerateSkill,
   experienceSectionRewriteSkill,
 } from './experienceSkills'
 import { jobOpportunityParseSkill } from './jobOpportunitySkills'
@@ -23,7 +25,9 @@ export const skillRegistry = [
     skills: [
       experienceDeepDiveSkill,
       experienceEvidenceSynthesisSkill,
-      experienceDossierGenerateSkill,
+      experienceOverviewGenerateSkill,
+      experienceProjectDossierGenerateSkill,
+      experienceProjectStoryGenerateSkill,
       experienceSectionRewriteSkill,
     ],
   },

@@ -133,6 +133,7 @@ function extractReadable(text) {
 
 function isFinalOutput(text) {
   return (
+    text.includes('# 完整经历档案') ||
     text.includes('```json') ||
     (text.includes('## 简历条目') && text.includes('## STAR')) ||
     (text.includes('## 口述故事') && text.includes('## 核心亮点'))
@@ -400,14 +401,14 @@ export default function ExperiencePage() {
     if (outputText) localStorage.setItem(storageKeys.output, outputText)
   }, [outputText, storageKeys.output])
 
-  const handleAssistantMessage = useCallback((text) => {
+  const handleAssistantMessage = useCallback((text, metadata = {}) => {
     if (!isFinalOutput(text)) return
     const readable = extractReadable(text)
     setOutputText(readable)
     setHasOutput(true)
     setSaved(false)   // new output → reset saved state, user must re-confirm
     localStorage.setItem(storageKeys.saved, 'false')
-    const exp = extractExperienceJson(text)
+    const exp = metadata.asset || extractExperienceJson(text)
     const fallback = buildFallbackExp(readable, sourceExperience)
     const nextExp = normalizeExperienceAsset({
       ...fallback,
@@ -423,7 +424,7 @@ export default function ExperiencePage() {
 
   useEffect(() => subscribeAgentArtifacts(artifact => {
     if (artifact?.type !== 'experience.output') return
-    handleAssistantMessage(artifact.content || '')
+    handleAssistantMessage(artifact.content || '', artifact.metadata || {})
   }), [handleAssistantMessage])
 
   const rewritePresets = ['更像简历语言', '更具体', '更口语化', '减少空话', '更突出我的贡献', '更适合面试回答']
@@ -600,7 +601,7 @@ export default function ExperiencePage() {
             autoSendMessage={autoPrefillMessage}
             directSkillId="experience.deep_dive.chat"
             emptyTitle="描述一段经历，助手会继续追问"
-            emptyText="它会把这段经历问透，确认生成模式后，再产出经历档案底稿、简历版、完整故事和面试工具包。"
+            emptyText="它会逐轮确认关键信息，再分别生成经历总览、项目档案和项目面试故事。"
             placeholder="描述经历，或回答助手的问题…"
           />
         )}
@@ -617,7 +618,7 @@ export default function ExperiencePage() {
                 <h2 className="text-sm font-black text-[#171321]">经历档案</h2>
                 <p className="mt-0.5 text-xs font-semibold text-[#8a8296]">
                   {outputText
-                    ? '档案底稿 · 简历版 · 完整故事 · 面试工具包'
+                    ? '经历总览 · 项目档案 · 项目面试故事'
                     : '追问完成后这里自动生成'}
                 </p>
               </div>
@@ -651,7 +652,7 @@ export default function ExperiencePage() {
               <div className="prep-panel h-full overflow-hidden">
                 <OutputPanel
                   content={outputText}
-                  emptyText={`调研进行中…\n\n确认生成后会产出：\n· 细致经历底稿\n· 简历版 bullet\n· 完整经历故事\n· 面试工具包`}
+                  emptyText={`调研进行中…\n\n确认生成后会依次产出：\n· 经历总览与简历表达\n· 每个项目的详细档案\n· 每个项目的详细面试故事`}
                   variant="experience"
                   onRewriteSection={openRewrite}
                 />

@@ -27,7 +27,11 @@ function compactApprovalResult(result) {
 }
 
 function shouldPublishSkillArtifact(skillId, text) {
-  if (skillId === 'experience.deep_dive.chat' || skillId === 'experience.dossier.generate') {
+  if (
+    skillId === 'experience.deep_dive.chat'
+    || skillId === 'experience.dossier.generate'
+    || skillId === 'experience.overview.generate'
+  ) {
     return text.includes('```json') || text.includes('# 完整经历档案')
   }
   if (skillId === 'battle_plan.manual.chat') {
@@ -61,6 +65,80 @@ function buildExperienceTranscript(messages = []) {
     .filter(message => !message.hidden && ['user', 'assistant'].includes(message.role))
     .map(message => `${message.role === 'user' ? '用户' : 'AI'}：\n${message.content || ''}`)
     .join('\n\n---\n\n')
+}
+
+function experienceGenerationStatus(step, total, current, completed = []) {
+  return [
+    '## 正在生成完整经历档案',
+    '',
+    `**${step}/${total} · ${current}**`,
+    '',
+    completed.length > 0 ? `已完成：${completed.join('、')}` : '正在读取并整理本次调研内容',
+    '',
+    '每一部分生成后会继续处理下一部分，请稍候。',
+  ].join('\n')
+}
+
+function safeMarkdownTitle(value, fallback) {
+  return String(value || fallback || '未命名项目')
+    .replace(/[#\n\r]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function assembleExperienceDossier({ mode, overview, projects }) {
+  const parts = [
+    '# 完整经历档案',
+    '',
+    `> 生成模式：${mode === 'enhanced' ? '增强模式' : '精准模式'}`,
+    '',
+    '## 经历总览',
+    '',
+    overview.trim(),
+  ]
+
+  projects.forEach(project => {
+    parts.push(
+      '',
+      `## 项目档案：${safeMarkdownTitle(project.name, '项目')}`,
+      '',
+      project.dossier.trim(),
+    )
+  })
+
+  projects.forEach(project => {
+    parts.push(
+      '',
+      `## 面试故事：${safeMarkdownTitle(project.name, '项目')}`,
+      '',
+      project.story.trim(),
+    )
+  })
+
+  return parts.join('\n').trim()
+}
+
+function buildExperienceArtifactAsset(evidence, mode) {
+  const identity = evidence?.identity || {}
+  const title = identity.title
+    || [identity.company, identity.role, identity.time].filter(Boolean).join(' · ')
+    || '经历档案'
+  return {
+    title,
+    company: identity.company || '',
+    role: identity.role || '',
+    time: identity.time || '',
+    type: identity.type || 'project',
+    generation_mode: mode,
+    one_line_summary: evidence?.mainline || '',
+    project_breakdown: evidence?.projects || [],
+    key_metrics: evidence?.confirmedMetrics || [],
+    skills_demonstrated: evidence?.confirmedAbilities || [],
+    open_questions: [
+      ...(evidence?.globalUnknowns || []),
+      ...(evidence?.projects || []).flatMap(project => project.unknowns || []),
+    ],
+  }
 }
 
 export function AgentProvider({ children }) {
@@ -248,28 +326,104 @@ export function AgentProvider({ children }) {
       }
       let full = ''
       let completedSkill = skill
+      let assistantText = ''
+      let artifactMetadata = {}
       const generationMode = skillId === 'experience.deep_dive.chat'
         ? inferExperienceGenerationMode(content, threadMessages)
         : ''
 
       if (generationMode) {
         const evidenceSkill = getSkillById('experience.evidence.synthesize')
-        const dossierSkill = getSkillById('experience.dossier.generate')
+        const overviewSkill = getSkillById('experience.overview.generate')
+        const projectDossierSkill = getSkillById('experience.project_dossier.generate')
+        const projectStorySkill = getSkillById('experience.project_story.generate')
         const transcript = buildExperienceTranscript(history)
-        setStreamingText('正在整理已确认信息，并检查各项目是否完整…')
+        setStreamingText(experienceGenerationStatus(1, '…', '整理已确认事实'))
         const evidence = await runTextSkill({
           skill: evidenceSkill,
           settings,
           input: { mode: generationMode, transcript },
         })
-        completedSkill = dossierSkill
-        setStreamingText('事实底稿已整理，正在生成完整经历档案…')
-        full = await runTextSkill({
-          skill: dossierSkill,
+        const projects = Array.isArray(evidence.projects) ? evidence.projects : []
+        const totalSteps = 2 + projects.length * 2
+        const completed = ['事实整理']
+
+        setStreamingText(experienceGenerationStatus(2, totalSteps, '生成经历总览与简历表达', completed))
+        const overview = await runTextSkill({
+          skill: overviewSkill,
           settings,
           input: { mode: generationMode, evidence },
-          onToken: setStreamingText,
         })
+        completed.push('经历总览')
+
+        const generatedProjects = []
+        for (let index = 0; index < projects.length; index += 1) {
+          const project = projects[index]
+          const projectName = safeMarkdownTitle(project.name, `项目 ${index + 1}`)
+          const step = 3 + index
+          setStreamingText(experienceGenerationStatus(
+            step,
+            totalSteps,
+            `生成项目档案：${projectName}`,
+            completed,
+          ))
+          const projectDossier = await runTextSkill({
+            skill: projectDossierSkill,
+            settings,
+            input: {
+              mode: generationMode,
+              identity: evidence.identity,
+              mainline: evidence.mainline,
+              project,
+            },
+          })
+          generatedProjects.push({
+            name: projectName,
+            project,
+            dossier: projectDossier,
+            story: '',
+          })
+          completed.push(`${projectName}档案`)
+        }
+
+        for (let index = 0; index < generatedProjects.length; index += 1) {
+          const generated = generatedProjects[index]
+          const step = 3 + projects.length + index
+          setStreamingText(experienceGenerationStatus(
+            step,
+            totalSteps,
+            `生成面试故事：${generated.name}`,
+            completed,
+          ))
+          generated.story = await runTextSkill({
+            skill: projectStorySkill,
+            settings,
+            input: {
+              mode: generationMode,
+              identity: evidence.identity,
+              project: generated.project,
+              projectDossier: generated.dossier,
+            },
+          })
+          completed.push(`${generated.name}面试故事`)
+        }
+
+        completedSkill = overviewSkill
+        full = assembleExperienceDossier({
+          mode: generationMode,
+          overview,
+          projects: generatedProjects,
+        })
+        artifactMetadata = {
+          asset: buildExperienceArtifactAsset(evidence, generationMode),
+          generationMode,
+          projectCount: generatedProjects.length,
+        }
+        assistantText = [
+          '完整经历档案已经生成。',
+          '',
+          `本次完成了经历总览、${generatedProjects.length} 个项目档案和 ${generatedProjects.length} 个项目面试故事。请在右侧查看，确认后再保存为经历资产。`,
+        ].join('\n')
       } else {
         const userSkillMessage = skill.buildUserMessage({ ...baseContext, message: content })
         const modelMessages = [
@@ -287,8 +441,9 @@ export function AgentProvider({ children }) {
           full += chunk
           setStreamingText(full)
         }
+        assistantText = full
       }
-      const nextMessages = [...history, { role: 'assistant', content: full }]
+      const nextMessages = [...history, { role: 'assistant', content: assistantText || full }]
       setMessages(nextMessages)
       saveAgentThread(nextMessages, targetThreadId)
 
@@ -299,7 +454,11 @@ export function AgentProvider({ children }) {
           title: baseContext.artifactTitle || completedSkill.name,
           content: full,
           source: completedSkill.id,
-          metadata: { skillId: completedSkill.id, page: baseContext.currentPath || '' },
+          metadata: {
+            skillId: completedSkill.id,
+            page: baseContext.currentPath || '',
+            ...artifactMetadata,
+          },
         })
       }
     } catch (err) {

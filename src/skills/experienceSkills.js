@@ -3,6 +3,9 @@ import {
   EXPERIENCE_DOSSIER_SYSTEM,
   EXPERIENCE_EVIDENCE_SYSTEM,
   EXPERIENCE_OPENING,
+  EXPERIENCE_OVERVIEW_SYSTEM,
+  EXPERIENCE_PROJECT_DOSSIER_SYSTEM,
+  EXPERIENCE_PROJECT_STORY_SYSTEM,
   EXPERIENCE_SYSTEM,
   getExperienceSectionRewriteSystem,
 } from '../prompts/experience'
@@ -111,6 +114,73 @@ export const experienceDossierGenerateSkill = defineTextSkill({
   ].join('\n\n'),
   repairResult: repairDossierOutput,
   validateResult: (text, _full, input) => validateDossierOutput(text, input),
+})
+
+export const experienceOverviewGenerateSkill = defineTextSkill({
+  id: 'experience.overview.generate',
+  name: '经历总览与简历表达生成',
+  description: '基于完整事实底稿生成经历总览、项目索引和整段经历简历 bullet。',
+  version: '0.1.0',
+  buildSystemPrompt: () => EXPERIENCE_OVERVIEW_SYSTEM,
+  buildUserMessage: input => [
+    `【生成模式】${input.mode === 'enhanced' ? '增强模式' : '精准模式'}`,
+    '【结构化事实底稿】',
+    JSON.stringify(input.evidence || {}, null, 2),
+  ].join('\n\n'),
+  validateResult: text => {
+    if (!text?.includes('#### 基础信息') || !text.includes('#### 简历表达')) {
+      return '经历总览结构不完整。'
+    }
+    if (/```json|```/.test(text)) return '经历总览不应包含代码块。'
+    return true
+  },
+})
+
+export const experienceProjectDossierGenerateSkill = defineTextSkill({
+  id: 'experience.project_dossier.generate',
+  name: '项目详细档案生成',
+  description: '逐项目生成详细职责、贡献边界以及行动与决策链。',
+  version: '0.1.0',
+  buildSystemPrompt: () => EXPERIENCE_PROJECT_DOSSIER_SYSTEM,
+  buildUserMessage: input => [
+    `【生成模式】${input.mode === 'enhanced' ? '增强模式' : '精准模式'}`,
+    '【经历基本信息】',
+    JSON.stringify(input.identity || {}, null, 2),
+    '【整段经历定位】',
+    input.mainline || '',
+    '【当前项目事实】',
+    JSON.stringify(input.project || {}, null, 2),
+  ].join('\n\n'),
+  validateResult: text => {
+    const required = ['#### 业务现场与目标', '#### 我的职责', '#### 行动与决策链', '#### 结果与证据']
+    if (required.some(marker => !text?.includes(marker))) return '项目档案结构不完整。'
+    if (/```json|```/.test(text)) return '项目档案不应包含代码块。'
+    return true
+  },
+})
+
+export const experienceProjectStoryGenerateSkill = defineTextSkill({
+  id: 'experience.project_story.generate',
+  name: '项目面试故事生成',
+  description: '基于单个项目档案生成详细面试故事和针对性追问。',
+  version: '0.1.0',
+  buildSystemPrompt: () => EXPERIENCE_PROJECT_STORY_SYSTEM,
+  buildUserMessage: input => [
+    '【经历基本信息】',
+    JSON.stringify(input.identity || {}, null, 2),
+    `【项目名称】\n${input.project?.name || '当前项目'}`,
+    '【结构化项目事实】',
+    JSON.stringify(input.project || {}, null, 2),
+    '【已生成的项目档案】',
+    input.projectDossier || '',
+  ].join('\n\n'),
+  validateResult: text => {
+    if (!text?.includes('#### 详细面试故事') || !text.includes('#### 面试追问')) {
+      return '项目面试故事结构不完整。'
+    }
+    if (/```json|```/.test(text)) return '项目面试故事不应包含代码块。'
+    return true
+  },
 })
 
 export const experienceSectionRewriteSkill = defineTextSkill({

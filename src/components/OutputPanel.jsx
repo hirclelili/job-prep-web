@@ -248,7 +248,10 @@ export default function OutputPanel({ content, emptyText = '这里会显示整�
       </div>
     )
   }
-  const displayContent = content.replace(/<!--\s*MANUAL_COMPLETE\s*-->/g, '').trim()
+  const displayContent = content
+    .replace(/<!--\s*MANUAL_COMPLETE\s*-->/g, '')
+    .replace(/```json\s*[\s\S]*?```/gi, '')
+    .trim()
   const sections = variant === 'experience' ? splitExperienceSections(displayContent) : splitSections(displayContent)
   const hasSections = sections.some(s => s.title !== '__preamble')
   return (
