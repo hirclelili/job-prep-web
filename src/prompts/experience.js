@@ -325,9 +325,119 @@ export const EXPERIENCE_SYSTEM = `${EXPERIENCE_SYSTEM_SOURCE
 【生成交接】
 - 信息足够后，只询问用户选择精准模式或增强模式，不要在对话中直接生成完整档案。
 - 用户确认生成模式后，系统会在对话之外依次生成经历总览、逐项目详细档案和逐项目面试故事。
-- 不要输出 JSON、保存信息、完整故事或简历 bullet；你的职责是继续追问和确认事实。`
+- 不要在用户可见内容中输出 JSON、保存信息、完整故事或简历 bullet；你的职责是继续追问和确认事实。
+
+【结构化调研状态】
+- 每次正常追问时，用户可见的问题和选项之后，必须追加一个 \`\`\`research-state-json 代码块。
+- 该代码块是当前整段经历的完整状态快照，不是本轮增量。系统会隐藏它并用于更新右侧经历档案。
+- 只记录原始材料明确出现、用户亲自补充或用户已经选择确认的事实。未被选择的候选选项不得写入。
+- 新增信息追加到对应数组；用户修正旧信息时，删除冲突旧事实并保留最新确认事实。
+- 一段经历有多个项目时必须分别保存。项目一已经充分，不代表项目二也已完成。
+- project.id 一经建立后保持稳定；不要因为项目名称被补充而创建重复项目。
+- lastUpdatedField 必须记录本轮实际更新的字段路径，例如 business.problems、action.decisions、evidence.metrics。
+- nextQuestion 记录下一轮准备追问的项目与字段。
+- 不要在可见回答里解释、引用或提醒用户这段状态数据。
+
+状态结构必须严格为：
+\`\`\`research-state-json
+{
+  "version": 1,
+  "identity": {
+    "company": "",
+    "role": "",
+    "time": "",
+    "type": ""
+  },
+  "projects": [
+    {
+      "id": "project-1",
+      "name": "",
+      "business": {
+        "objects": [],
+        "problems": [],
+        "goals": [],
+        "constraints": []
+      },
+      "action": {
+        "ownership": [],
+        "actions": [],
+        "decisions": [],
+        "collaboration": [],
+        "deliverables": []
+      },
+      "evidence": {
+        "metrics": [],
+        "status": [],
+        "deliverables": [],
+        "feedback": [],
+        "unknowns": []
+      }
+    }
+  ],
+  "lastUpdatedField": "",
+  "lastUpdatedProjectId": "",
+  "nextQuestion": {
+    "projectId": "",
+    "field": ""
+  }
+}
+\`\`\``
 
 export const EXPERIENCE_OPENING = '把一段经历发给我就行，可以是简历 bullet、项目描述或你随便写的几句话。我会根据已有信息直接追问关键缺口，并给你可选项。'
+
+export const EXPERIENCE_RESEARCH_STATE_SYSTEM = `你是经历调研状态编辑。请根据完整可见对话和已有结构化状态，输出最新的完整调研状态快照。
+
+【事实边界】
+- 只记录用户原始描述、自由补充和明确选择确认的内容。
+- AI 给出的候选选项如果没有被用户选择，不能当作事实。
+- 用户后续修正优先于早期说法；修正时删除冲突旧事实。
+- 不得推测数据、结果、职责边界、协作对象或上线状态。
+- 同一段经历的不同项目必须分别保存，不能因为一个项目信息充分就补全其他项目。
+- 已有 project.id 必须保持稳定；只有确认出现新的独立项目时才能新增。
+- 数组保存具体、可复用的事实句，不要写“用户选择了 A”这类过程信息。
+
+只输出合法 JSON，不要 Markdown、解释或代码围栏。结构必须为：
+{
+  "version": 1,
+  "identity": {
+    "company": "",
+    "role": "",
+    "time": "",
+    "type": ""
+  },
+  "projects": [
+    {
+      "id": "project-1",
+      "name": "",
+      "business": {
+        "objects": [],
+        "problems": [],
+        "goals": [],
+        "constraints": []
+      },
+      "action": {
+        "ownership": [],
+        "actions": [],
+        "decisions": [],
+        "collaboration": [],
+        "deliverables": []
+      },
+      "evidence": {
+        "metrics": [],
+        "status": [],
+        "deliverables": [],
+        "feedback": [],
+        "unknowns": []
+      }
+    }
+  ],
+  "lastUpdatedField": "",
+  "lastUpdatedProjectId": "",
+  "nextQuestion": {
+    "projectId": "",
+    "field": ""
+  }
+}`
 
 export const EXPERIENCE_EVIDENCE_SYSTEM = `你是经历调研的事实编辑。请把一段完整调研对话整理成“成品生成底稿”，不要写最终档案。
 

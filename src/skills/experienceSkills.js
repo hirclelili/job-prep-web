@@ -6,6 +6,7 @@ import {
   EXPERIENCE_OVERVIEW_SYSTEM,
   EXPERIENCE_PROJECT_DOSSIER_SYSTEM,
   EXPERIENCE_PROJECT_STORY_SYSTEM,
+  EXPERIENCE_RESEARCH_STATE_SYSTEM,
   EXPERIENCE_SYSTEM,
   getExperienceSectionRewriteSystem,
 } from '../prompts/experience'
@@ -69,14 +70,34 @@ export const experienceDeepDiveSkill = defineTextSkill({
     input.archiveStatusExplanation || '聊天记录不代表已经生成完整经历档案，也不代表已经保存归档。',
     `是否已有对话调研进度：${input.hasChatProgress || 'no'}`,
     '硬规则：判断是否完成或归档时，只能看本段状态说明，不要根据聊天历史推断。',
-    input.confirmedResearchSummary
-      ? `\n【右侧已实时记录的确认信息】\n${input.confirmedResearchSummary}\n这些内容来自本条经历的问答记录，可用于判断下一轮缺口；如与用户最新表达冲突，以最新表达为准。`
+    input.currentResearchState?.projects?.length
+      ? `\n【当前结构化调研状态】\n${JSON.stringify(input.currentResearchState, null, 2)}\n本轮必须在此基础上累计或修正事实，并在回答末尾返回最新完整状态快照。`
       : '',
     input.currentDossierPreview ? `\n【右侧经历档案草稿摘要】\n${input.currentDossierPreview}` : '',
     '',
     '【用户本轮输入】',
     input.message || '',
   ].filter(Boolean).join('\n'),
+})
+
+export const experienceResearchStateSynthesisSkill = defineTextSkill({
+  id: 'experience.research_state.synthesize',
+  name: '经历调研状态整理',
+  description: '在调研回复缺少状态数据时，根据当前对话修复结构化事实快照。',
+  version: '0.1.0',
+  buildSystemPrompt: () => EXPERIENCE_RESEARCH_STATE_SYSTEM,
+  buildUserMessage: input => [
+    '【已有结构化状态】',
+    JSON.stringify(input.currentState || {}, null, 2),
+    '【完整可见调研对话】',
+    input.transcript || '',
+  ].join('\n\n'),
+  parseResult: text => parseJsonFromMarkdown(text),
+  validateResult: result => {
+    if (!result || typeof result !== 'object') return '没有成功恢复调研状态。'
+    if (!Array.isArray(result.projects)) return '调研状态缺少项目列表。'
+    return true
+  },
 })
 
 export const experienceEvidenceSynthesisSkill = defineTextSkill({

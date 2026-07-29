@@ -45,6 +45,7 @@ function cleanOptionText(text = '') {
 function cleanAssistantDisplay(text = '') {
   return stripAgentToolBlocks(text)
     .replace(/<!--\s*MANUAL_COMPLETE\s*-->/g, '')
+    .replace(/```research-state-json\s*[\s\S]*?(?:```|$)/gi, '')
     .replace(/```json\s*[\s\S]*?```/gi, '')
     .trim()
 }

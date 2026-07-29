@@ -6,6 +6,11 @@ import { streamChat } from '../services/llm'
 import { getSkillById } from '../skills/registry'
 import { runTextSkill } from '../skills/core'
 import { getExperiences } from '../utils/storage'
+import {
+  normalizeExperienceResearchState,
+  parseExperienceResearchState,
+  stripExperienceResearchState,
+} from '../utils/experienceResearchProgress'
 import { getJobSearchEnrichment } from '../services/search'
 import { useApp } from './AppContext'
 
@@ -63,8 +68,18 @@ function inferExperienceGenerationMode(content, threadMessages = []) {
 function buildExperienceTranscript(messages = []) {
   return messages
     .filter(message => !message.hidden && ['user', 'assistant'].includes(message.role))
-    .map(message => `${message.role === 'user' ? '用户' : 'AI'}：\n${message.content || ''}`)
+    .map(message => `${message.role === 'user' ? '用户' : 'AI'}：\n${
+      message.role === 'assistant'
+        ? stripExperienceResearchState(message.content)
+        : message.content || ''
+    }`)
     .join('\n\n---\n\n')
+}
+
+function hasResearchStateRegression(currentState, nextState) {
+  const currentIds = new Set((currentState?.projects || []).map(project => project.id).filter(Boolean))
+  const nextIds = new Set((nextState?.projects || []).map(project => project.id).filter(Boolean))
+  return [...currentIds].some(id => !nextIds.has(id))
 }
 
 function experienceGenerationStatus(step, total, current, completed = []) {
@@ -427,7 +442,12 @@ export function AgentProvider({ children }) {
       } else {
         const userSkillMessage = skill.buildUserMessage({ ...baseContext, message: content })
         const modelMessages = [
-          ...threadMessages.map(message => ({ role: message.role, content: message.content })),
+          ...threadMessages.map(message => ({
+            role: message.role,
+            content: skillId === 'experience.deep_dive.chat' && message.role === 'assistant'
+              ? stripExperienceResearchState(message.content)
+              : message.content,
+          })),
           ...(Array.isArray(userSkillMessage)
             ? userSkillMessage
             : [{ role: 'user', content: userSkillMessage }]),
@@ -439,6 +459,32 @@ export function AgentProvider({ children }) {
         })
         for await (const chunk of gen) {
           full += chunk
+          setStreamingText(full)
+        }
+        if (skillId === 'experience.deep_dive.chat') {
+          const visibleReply = stripExperienceResearchState(full)
+          let researchState = parseExperienceResearchState(full)
+          if (!researchState || hasResearchStateRegression(baseContext.currentResearchState, researchState)) {
+            const stateSkill = getSkillById('experience.research_state.synthesize')
+            researchState = await runTextSkill({
+              skill: stateSkill,
+              settings,
+              input: {
+                currentState: baseContext.currentResearchState || {},
+                transcript: buildExperienceTranscript([
+                  ...history,
+                  { role: 'assistant', content: visibleReply },
+                ]),
+              },
+            })
+          }
+          const normalizedState = normalizeExperienceResearchState(researchState)
+          full = [
+            visibleReply,
+            '```research-state-json',
+            JSON.stringify(normalizedState),
+            '```',
+          ].filter(Boolean).join('\n\n')
           setStreamingText(full)
         }
         assistantText = full

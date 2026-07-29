@@ -7,6 +7,7 @@ import {
   experienceOverviewGenerateSkill,
   experienceProjectDossierGenerateSkill,
   experienceProjectStoryGenerateSkill,
+  experienceResearchStateSynthesisSkill,
   experienceSectionRewriteSkill,
 } from './experienceSkills'
 import { jobOpportunityParseSkill } from './jobOpportunitySkills'
@@ -24,6 +25,7 @@ export const skillRegistry = [
     stageName: '经历调研',
     skills: [
       experienceDeepDiveSkill,
+      experienceResearchStateSynthesisSkill,
       experienceEvidenceSynthesisSkill,
       experienceOverviewGenerateSkill,
       experienceProjectDossierGenerateSkill,

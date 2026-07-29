@@ -528,7 +528,7 @@ export default function ExperiencePage() {
     pageInstruction: '用户在经历调研页。若用户描述一段经历或回答追问，优先调用 skill.chat_turn 的 experience.deep_dive.chat。skill 返回本轮问题和选项时，最终回复必须保留“## 本轮问题 / 为什么问 / 选项 / 补充提示”的结构和 A/B/C/D 选项文字，方便页面渲染可点击选项。如果输出已经是完整经历档案，发布为 experience.output。',
     currentOutputStatus: archiveStatus,
     hasChatProgress: hasExperienceChatProgress ? 'yes' : 'no',
-    confirmedResearchSummary: researchProgress.summary,
+    currentResearchState: researchProgress.state,
     currentDossierPreview: outputText ? outputText.slice(0, 1800) : '',
     archiveStatusExplanation: archiveStatus === 'saved_to_library'
       ? '右侧完整经历档案已经保存到经历资产库。可以说已保存。'
