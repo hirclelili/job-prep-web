@@ -214,20 +214,26 @@ function ResumeVersionCard({ resume, active, onOpen, onDelete }) {
 
 function ExportMenu({ onWord, onPdf, onPng, disabled = false }) {
   const [open, setOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
-  const run = (action) => {
+  const run = async (action) => {
     setOpen(false)
-    action()
+    setExporting(true)
+    try {
+      await action()
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(value => !value)}
-        disabled={disabled}
+        disabled={disabled || exporting}
         className="prep-ghost disabled:cursor-not-allowed disabled:opacity-40"
       >
-        导出
+        {exporting ? '导出中…' : '导出'}
       </button>
       {open && (
         <div className="absolute right-0 top-full z-30 mt-2 w-36 overflow-hidden rounded-lg border border-[#171321]/10 bg-white p-1.5 shadow-[0_14px_38px_rgba(62,48,86,0.18)]">
@@ -1501,6 +1507,7 @@ export default function ResumePage() {
                 <p className="mt-1 text-xs font-semibold text-[#8a8296]">
                   {current.target || '未设置目标'} · 更新于 {formatDate(current.updatedAt)}
                 </p>
+                {error && <p className="mt-1 text-xs font-semibold leading-5 text-red-500">{error}</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button onClick={handleEditCurrentResume} className="prep-secondary">
@@ -1509,7 +1516,11 @@ export default function ResumePage() {
                 <ExportMenu
                   onWord={() => downloadResumeWord({ title: currentTitle, content: currentContent, profile: currentProfile })}
                   onPdf={() => downloadResumePdf({ title: currentTitle, content: currentContent, profile: currentProfile })}
-                  onPng={() => downloadResumeImage({ title: currentTitle, content: currentContent, profile: currentProfile })}
+                  onPng={() => {
+                    setError('')
+                    return downloadResumeImage({ title: currentTitle, content: currentContent, profile: currentProfile })
+                      .catch(err => setError('PNG 图片导出失败：' + (err?.message || '请稍后重试')))
+                  }}
                 />
               </div>
             </div>
@@ -1784,7 +1795,11 @@ export default function ResumePage() {
                       disabled={loading}
                       onWord={() => downloadResumeWord(exportPayload())}
                       onPdf={() => downloadResumePdf(exportPayload())}
-                      onPng={() => downloadResumeImage(exportPayload())}
+                      onPng={() => {
+                        setError('')
+                        return downloadResumeImage(exportPayload())
+                          .catch(err => setError('PNG 图片导出失败：' + (err?.message || '请稍后重试')))
+                      }}
                     />
                   </>
                 ) : (

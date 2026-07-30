@@ -1,4 +1,5 @@
 import { removeEmptyResumeSections } from './resumeNormalize'
+import { toPng } from 'html-to-image'
 
 function escapeHtml(text = '') {
   return String(text)
@@ -176,26 +177,76 @@ export function downloadResumePdf({ title, content, profile }) {
 }
 
 export async function downloadResumeImage({ title, content, profile }) {
-  const html = buildResumeDocumentHtml({ title, content, profile, forExport: true }).replace(/<script>[\s\S]*?<\/script>/g, '')
-  const wrapped = '<div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"width:794px;background:white\">' + html + '</div>'
-  const svg = '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"794\" height=\"1123\"><foreignObject width=\"100%\" height=\"100%\">' + wrapped + '</foreignObject></svg>'
-  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const img = new Image()
-  img.src = url
-  await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject })
-  const canvas = document.createElement('canvas')
-  canvas.width = 794
-  canvas.height = 1123
-  const ctx = canvas.getContext('2d')
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-  ctx.drawImage(img, 0, 0)
-  URL.revokeObjectURL(url)
-  const a = document.createElement('a')
-  a.href = canvas.toDataURL('image/png')
-  a.download = safeFileName(title) + '.png'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.position = 'fixed'
+  iframe.style.left = '-10000px'
+  iframe.style.top = '0'
+  iframe.style.width = '794px'
+  iframe.style.height = '1123px'
+  iframe.style.border = '0'
+  iframe.style.opacity = '0'
+  iframe.style.pointerEvents = 'none'
+
+  try {
+    const loaded = new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error('简历页面渲染超时')), 8000)
+      iframe.addEventListener('load', () => {
+        window.clearTimeout(timeout)
+        resolve()
+      }, { once: true })
+    })
+
+    iframe.srcdoc = buildResumeDocumentHtml({ title, content, profile, forExport: true })
+    document.body.appendChild(iframe)
+    await loaded
+
+    const frameDocument = iframe.contentDocument
+    const frameWindow = iframe.contentWindow
+    if (!frameDocument || !frameWindow) throw new Error('无法读取简历页面')
+
+    await frameDocument.fonts?.ready
+    await Promise.all(
+      Array.from(frameDocument.images).map(image => {
+        if (image.complete) return image.decode?.().catch(() => {}) || Promise.resolve()
+        return new Promise(resolve => {
+          image.addEventListener('load', resolve, { once: true })
+          image.addEventListener('error', resolve, { once: true })
+        })
+      })
+    )
+
+    if (!frameWindow.__resumeReady) {
+      await new Promise(resolve => {
+        const timeout = window.setTimeout(resolve, 700)
+        frameWindow.addEventListener('resume-ready', () => {
+          window.clearTimeout(timeout)
+          resolve()
+        }, { once: true })
+      })
+    }
+
+    const page = frameDocument.querySelector('.resume-page')
+    if (!page) throw new Error('没有找到简历内容')
+
+    const dataUrl = await toPng(page, {
+      width: 794,
+      height: 1123,
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+      cacheBust: true,
+    })
+
+    const pngBlob = await fetch(dataUrl).then(response => response.blob())
+    const downloadUrl = URL.createObjectURL(pngBlob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = safeFileName(title) + '.png'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000)
+  } finally {
+    iframe.remove()
+  }
 }
