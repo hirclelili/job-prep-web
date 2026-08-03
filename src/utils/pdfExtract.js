@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 import pdfjsWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
+import { assessPDFTextQuality } from './pdfQuality'
 
 // Use local worker bundled by Vite — no CDN dependency
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
@@ -58,17 +59,30 @@ export async function extractTextFromPDF(file) {
 
   const pageCount = pdf.numPages
   const pageTexts = []
+  const pages = []
   const skippedPages = []
 
   for (let i = 1; i <= pageCount; i++) {
     try {
       const page = await pdf.getPage(i)
       const pageText = await extractPageText(page)
+      pages.push({
+        page: i,
+        text: pageText,
+        charCount: pageText.replace(/\s/g, '').length,
+      })
       if (pageText.trim()) pageTexts.push(pageText)
     } catch (err) {
       skippedPages.push({ page: i, error: err.message })
     }
   }
 
-  return { text: pageTexts.join('\n\n'), pageCount, skippedPages }
+  const text = pageTexts.join('\n\n')
+  return {
+    text,
+    pageCount,
+    skippedPages,
+    pages,
+    quality: assessPDFTextQuality({ text, pageCount, skippedPages, pages }),
+  }
 }

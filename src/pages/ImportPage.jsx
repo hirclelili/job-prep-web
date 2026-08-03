@@ -17,6 +17,8 @@ export default function ImportPage() {
   const [fileName, setFileName] = useState(() => initialDraft?.data?.fileName || '')
   const [errorMsg, setErrorMsg] = useState('')
   const [parseNote, setParseNote] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [localFallbackText, setLocalFallbackText] = useState('')
   const [showTextInput, setShowTextInput] = useState(() => !!initialDraft?.data?.resumeText)
   const [resumeText, setResumeText] = useState(() => initialDraft?.data?.resumeText || '')
   const [draftUpdatedAt, setDraftUpdatedAt] = useState(() => initialDraft?.updatedAt || '')
@@ -36,11 +38,15 @@ export default function ImportPage() {
     if (saved) setDraftUpdatedAt(saved.updatedAt)
   }, [fileName, resumeText, showTextInput])
 
-  const parseResumeText = useCallback(async (text, sourceName = '简历文本') => {
+  const parseResumeText = useCallback(async (text, sourceName = '简历文本', options = {}) => {
+    const silent = Boolean(options.silent)
     if (!text.trim()) {
-      setErrorMsg('没有可识别的简历文字，请先粘贴简历内容。')
-      setStep('error')
-      return
+      const message = '没有可识别的简历文字，请先粘贴简历内容。'
+      if (!silent) {
+        setErrorMsg(message)
+        setStep('error')
+      }
+      return { ok: false, message }
     }
 
     setStep('parsing')
@@ -54,16 +60,22 @@ export default function ImportPage() {
         input: { resumeText: text },
       })
     } catch (err) {
-      setErrorMsg(`AI 解析失败：${err.message}`)
-      setShowTextInput(true)
-      setStep('error')
-      return
+      const message = `AI 解析失败：${err.message}`
+      if (!silent) {
+        setErrorMsg(message)
+        setShowTextInput(true)
+        setStep('error')
+      }
+      return { ok: false, message }
     }
     if (!result?.experiences?.length) {
-      setErrorMsg('未识别到工作/实习经历，请检查简历格式，或手动做经历调研。')
-      setShowTextInput(true)
-      setStep('error')
-      return
+      const message = '未识别到工作/实习经历，请检查简历格式，或手动做经历调研。'
+      if (!silent) {
+        setErrorMsg(message)
+        setShowTextInput(true)
+        setStep('error')
+      }
+      return { ok: false, message }
     }
 
     if (result.profile) saveProfile(result.profile)
@@ -80,7 +92,28 @@ export default function ImportPage() {
     refreshExperiences()
     clearDraft(DRAFT_KEYS.resumeImport)
     navigate('/library', { state: { justImported: result.experiences.length } })
+    return { ok: true }
   }, [settings, refreshExperiences, navigate])
+
+  const parseWithMinerU = useCallback(async (file, reason = '') => {
+    if (!file) return false
+    setStep('enhancing')
+    setErrorMsg('')
+    setParseNote(reason || '本地解析结果不完整，正在切换增强解析。')
+    try {
+      const { extractResumeWithMinerU } = await import('../services/mineru')
+      const result = await extractResumeWithMinerU(file)
+      setResumeText(result.text)
+      setParseNote('增强解析已完成，正在识别简历结构。')
+      const parsed = await parseResumeText(result.text, file.name)
+      return Boolean(parsed?.ok)
+    } catch (error) {
+      setErrorMsg(`增强解析失败：${error.message}`)
+      setShowTextInput(Boolean(localFallbackText))
+      setStep('error')
+      return false
+    }
+  }, [localFallbackText, parseResumeText])
 
   const handleFile = useCallback(async (file) => {
     if (!file || file.type !== 'application/pdf') {
@@ -91,38 +124,43 @@ export default function ImportPage() {
     if (!isConfigured) { setShowSettings(true); return }
 
     setFileName(file.name)
+    setSelectedFile(file)
+    setLocalFallbackText('')
     setStep('extracting')
     setErrorMsg('')
     setParseNote('')
 
     let text = ''
+    let localResult = null
     try {
       const { extractTextFromPDF } = await import('../utils/pdfExtract')
-      const result = await extractTextFromPDF(file)
-      text = result.text
-      if (result.skippedPages?.length) {
-        setParseNote(`有 ${result.skippedPages.length} 页 PDF 结构较特殊，已跳过这些页面并继续识别。`)
-      }
+      localResult = await extractTextFromPDF(file)
+      text = localResult.text
     } catch (err) {
-      setErrorMsg(`PDF 解析失败：${err.message}`)
-      setStep('error')
+      await parseWithMinerU(file, `本地解析失败，正在使用增强解析：${err.message}`)
       return
     }
 
-    if (!text.trim()) {
-      setErrorMsg('未能提取到文字。请确认这是文字版 PDF（非扫描件），或改用粘贴文本导入。')
-      setStep('error')
+    setLocalFallbackText(text)
+    if (localResult.quality?.shouldEnhance) {
+      const reason = localResult.quality.reasons.join('、') || '本地提取结果不完整'
+      await parseWithMinerU(file, `${reason}，正在使用增强解析。`)
       return
     }
 
     setResumeText(text)
-    await parseResumeText(text, file.name)
-  }, [isConfigured, parseResumeText, setShowSettings])
+    const parsed = await parseResumeText(text, file.name, { silent: true })
+    if (!parsed?.ok) {
+      await parseWithMinerU(file, '本地文字未能完整识别出经历，正在使用增强解析重新整理版面。')
+    }
+  }, [isConfigured, parseResumeText, parseWithMinerU, setShowSettings])
 
   const handleTextImport = async () => {
     if (!isConfigured) { setShowSettings(true); return }
     setErrorMsg('')
     setParseNote('')
+    setSelectedFile(null)
+    setLocalFallbackText('')
     await parseResumeText(resumeText, '粘贴的简历文本')
   }
 
@@ -182,7 +220,7 @@ export default function ImportPage() {
               PDF
             </div>
             <p className="text-sm font-medium text-gray-700">点击上传或拖拽 PDF 简历</p>
-            <p className="text-xs text-gray-400 mt-1">识别完成后自动存入经历资产和基础信息</p>
+            <p className="text-xs text-gray-400 mt-1">复杂版式或扫描版会自动切换增强解析</p>
             {!isConfigured && (
               <p className="text-xs text-orange-500 mt-2">请先设置 API Key</p>
             )}
@@ -230,19 +268,43 @@ export default function ImportPage() {
             <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
               {errorMsg}
               <p className="text-xs mt-2 text-red-500">
-                可以尝试用浏览器、预览或 WPS 重新导出 PDF；如果仍失败，可以点击“粘贴简历文本导入”。
+                可以重新尝试增强解析，或展开文本框检查并修改识别内容。
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedFile && (
+                  <button
+                    type="button"
+                    onClick={() => parseWithMinerU(selectedFile, '正在重新尝试增强解析。')}
+                    className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700"
+                  >
+                    重新增强解析
+                  </button>
+                )}
+                {localFallbackText.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => parseResumeText(localFallbackText, selectedFile?.name || fileName)}
+                    className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+                  >
+                    使用本地文字继续
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </>
       )}
 
-      {(step === 'extracting' || step === 'parsing') && (
+      {(step === 'extracting' || step === 'enhancing' || step === 'parsing') && (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
           <div className="text-center">
             <p className="text-sm font-medium text-gray-700">
-              {step === 'extracting' ? '正在提取 PDF 文字…' : 'AI 正在识别经历条目…'}
+              {step === 'extracting'
+                ? '正在检查 PDF 文字…'
+                : step === 'enhancing'
+                  ? '正在使用增强解析恢复版面…'
+                  : 'AI 正在识别经历条目…'}
             </p>
             <p className="text-xs text-gray-400 mt-1">{fileName}</p>
             {parseNote && <p className="text-xs text-amber-600 mt-2">{parseNote}</p>}
